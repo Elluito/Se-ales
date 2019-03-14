@@ -62,3 +62,7 @@ class juego():
         return self.tablero
 
 
+
+class Jugador_deterministico():
+    def __init__(self):
+        cosa=0
