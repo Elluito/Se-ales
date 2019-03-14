@@ -66,3 +66,4 @@ class juego():
 class Jugador_deterministico():
     def __init__(self):
         cosa=0
+        las_putas_dicen_no="no"
