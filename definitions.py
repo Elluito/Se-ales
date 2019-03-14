@@ -55,15 +55,14 @@ class juego():
            numero_out = np.argmax(numeros_p == numeros_ficha1)
 
 
-        self.numeros_posibles[numero_out]=numero_in
+       self.numeros_posibles[numero_out]=numero_in
 
-        self.tablero.append(ficha)
+       self.tablero.append(ficha)
 
-        return self.tablero
+       return self.tablero
 
 
 
 class Jugador_deterministico():
     def __init__(self):
         cosa=0
-        probando=0
