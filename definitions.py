@@ -1,33 +1,45 @@
 
 import numpy as np
 
+#Define una ficha del juego
 class ficha():
     def __init__(self,lado_1,lado_2):
+        #Número 1 de la ficha
         self.num_1=lado_1
+        #Número 2 de la ficha
         self.num_2=lado_2
+        #Determina si la ficha es doble
         self.es_doble=True if self.num_1==self.num_2 else False
+    #Asigna números a la ficha
     def __str__(self):
         l=str(self.num_1)+"/"+str(self.num_2)
         return l
 
-
+#Define las caracterísitcas del juego
 class juego():
     def __init__(self,N):
+        #Tablero
         self.tablero=[]
+        #Números que se pueden jugar
         self.numeros_posibles=()
+        #Cantidad de jugadores, se mantendrá normalmente en 4
         self.nume_jugadores=N
+        #Fichas del juego
         self.fichas = []
+        #Define las 28 fichas del juego
         for i in range(7):
             for j in range(i, 7):
                 self.fichas.append(ficha(i,j))
 
 
-
+    #Inicia el  juego
     def iniciar(self):
+        #Se hace un arreglo aleatorio de fichas
         fichas_jugadores=[]
         fichas_por_jugador=int(len(self.fichas)/self.N)
         fichas=np.random.shuffle(self.fichas)
 
+        #Se entregan fichas a cada jugador
         for i in range(self.N):
 
             fichas_jugadores.append(fichas[:fichas_por_jugador])
