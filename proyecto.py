@@ -18,15 +18,32 @@ import time as t
 import matplotlib.pyplot as plt
 from sklearn.metrics import accuracy_score
 from definitions import *
+import time as t
+
+
+
+Transitions=namedtuple('Transition',
+                        ('state', 'action', 'next_state','best_action_next_state','reward'))
 
 
 
 
-Transitions=namedtuple("")
+
+
+jugador1=Jugador_deterministico()
+
+jugador1=Jugador_deterministico()
+
+jugador1=Jugador_deterministico()
+
+jugador1=Jugador_deterministico()
 
 
 
+game=juego(4)
 
+
+NUM_EPISODES=80
 
 
 
