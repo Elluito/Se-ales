@@ -15,6 +15,11 @@ import numpy as np
 import random
 
 
+Transition=namedtuple('Transition',
+                        ('state', 'action', 'next_state','best_action_next_state','reward'))
+
+
+
 class ficha():
     def __init__(self,lado_1,lado_2):
         self.num_1=lado_1
@@ -48,33 +53,30 @@ class juego():
             del fichas[:fichas_por_jugador]
 
 
-        return fichas_jugadores
-
-
+        return tuple(fichas_jugadores)
 
     def reset(self):
         tablero=[]
 
-    def jugada_jugador(self, ficha,):
-       numeros_p=np.array([self.numeros_posibles[0],self.numeros_posibles[1]])
-       numeros_ficha1=np.array([ficha.num_1,ficha.num_2])
-       numeros_ficha2=np.array([ficha.num_2,ficha.num_1])
-       numero_in=0
-       numero_out=0
-       if sum(numeros_p==numeros_ficha1)==0:
-           numero_in=numeros_ficha2[np.argmin(numeros_p==numeros_ficha2)]
-           numero_out = np.argmax(numeros_p == numeros_ficha2)
-       else:
-           numero_in = numeros_ficha2[np.argmin(numeros_p == numeros_ficha1)]
-           numero_out = np.argmax(numeros_p == numeros_ficha1)
+    def jugada_jugador(self, ficha):
+            numeros_p=np.array([self.numeros_posibles[0],self.numeros_posibles[1]])
+            numeros_ficha1=np.array([ficha.num_1,ficha.num_2])
+            numeros_ficha2=np.array([ficha.num_2,ficha.num_1])
+            numero_in=0
+            numero_out=0
+            if sum(numeros_p==numeros_ficha1)==0:
+               numero_in=numeros_ficha2[np.argmin(numeros_p==numeros_ficha2)]
+               numero_out = np.argmax(numeros_p == numeros_ficha2)
+            else:
+               numero_in = numeros_ficha2[np.argmin(numeros_p == numeros_ficha1)]
+               numero_out = np.argmax(numeros_p == numeros_ficha1)
 
 
-       self.numeros_posibles[numero_out]=numero_in
+            self.numeros_posibles[numero_out]=numero_in
 
-       self.tablero.append(ficha)
+            self.tablero.append(ficha)
 
-       return self.tablero
-
+            return self.tablero
 
 
 class Jugador_re(nn.Module):
@@ -97,8 +99,6 @@ class Jugador_re(nn.Module):
             i+=1
             j+=1
         self.head=nn.Linear(hidden_layers[-1],1)
-
-
     def forward(self,x):
         for key in self.layers.keys():
             if "cap" in key:
