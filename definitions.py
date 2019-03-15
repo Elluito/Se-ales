@@ -1,5 +1,19 @@
 
 import numpy as np
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import torch.nn.functional as F
+import torchvision.transforms as T
+from sklearn.utils import shuffle
+from collections import namedtuple
+import copy
+import itertools
+import time as t
+import matplotlib.pyplot as plt
+import numpy as np
+import random
+
 
 class ficha():
     def __init__(self,lado_1,lado_2):
@@ -60,6 +74,56 @@ class juego():
        self.tablero.append(ficha)
 
        return self.tablero
+
+
+
+class Jugador_re(nn.Module):
+    def __init__(self,dims_states,dim_action,hidden_layers:list):
+        super(Jugador_re, self).__init__()
+        self.layers={}
+
+        j=0
+        i=1
+        for number in hidden_layers:
+            if j==0:
+                nombre = "capa%i" % i
+                self.layers[nombre] = nn.Linear(dims_states+dim_action,number)
+                i+=1
+                j+=1
+                continue
+
+            nombre="capa%i"%i
+            self.layers[nombre]=nn.Linear(hidden_layers[j-1],number)
+            i+=1
+            j+=1
+        self.head=nn.Linear(hidden_layers[-1],1)
+
+
+    def forward(self,x):
+        for key in self.layers.keys():
+            if "cap" in key:
+               x = F.relu(self.layers[key](torch.tensor(x,dtype=torch.float)))
+        return self.head(x)
+
+class ReplayMemory(object):
+
+    def __init__(self, capacity):
+        self.capacity = capacity
+        self.memory = []
+        self.position = 0
+
+    def push(self, *args):
+        """Saves a transition."""
+        if len(self.memory) < self.capacity:
+            self.memory.append(None)
+        self.memory[self.position] = Transition(*args)
+        self.position = (self.position + 1) % self.capacity
+
+    def sample(self, batch_size):
+        return random.sample(self.memory, batch_size)
+
+    def __len__(self):
+        return len(self.memory)
 
 
 
