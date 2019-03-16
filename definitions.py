@@ -14,6 +14,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random
 
+Transiton=namedtuple("Trasition",('state',))
+
 
 #Define una ficha del juego
 class ficha():
@@ -90,6 +92,9 @@ class juego():
 
 
 class Jugador_re(nn.Module):
+    # Inicio del jugador red_neuronal necesita las ddimenciones del state space y de las acciones que  pued ser un vector de 27 (numero de fichas) que contenga un 1 para decir
+    # la ficha que jugó, hidden_layers es un arreglo que me dice cuantas capas ocultas y cuantas neuronas por capa voy a tener
+
     def __init__(self,dims_states,dim_action,hidden_layers:list):
         super(Jugador_re, self).__init__()
         self.layers={}
@@ -110,8 +115,9 @@ class Jugador_re(nn.Module):
             j+=1
         self.head=nn.Linear(hidden_layers[-1],1)
 
-
+    # Este métopdo se utiliza para el entrenamiento y para las predicciones
     def forward(self,x):
+        #recorro cada una de las capas y les digo que tipo de activación quiero que tengan en este caso utilizo activación RELU para todas las intermedias y lineal para la última
         for key in self.layers.keys():
             if "cap" in key:
                x = F.relu(self.layers[key](torch.tensor(x,dtype=torch.float)))

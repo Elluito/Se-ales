@@ -101,12 +101,13 @@ for i in NUM_EPISODES:
     acabo=False
     jugador_turno=jugadores[jugador_inicia]
 
+    ronda=0
 
     while not acabo:
         cosas=0
+        if
 
-
-        tablero=game.ju
+        tablero=game.jugada_jugador(jugada)
 
 
 
