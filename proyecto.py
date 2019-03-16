@@ -37,7 +37,8 @@ def tiene_doble_6(fichas):
 
 
 
-def jugada_jugador(tablero,jugador,type)
+def jugada_jugador(tablero,jugador,type):
+
 #######################################
 #DISTRIBUCIÓN DEL JUEGO
 
@@ -104,8 +105,6 @@ for i in NUM_EPISODES:
     ronda=0
 
     while not acabo:
-        cosas=0
-        if
 
         tablero=game.jugada_jugador(jugada)
 

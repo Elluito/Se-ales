@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random
 
-Transiton=namedtuple("Trasition",('state',))
+Transition=namedtuple("Trasition",('state','action'))
 
 
 # Define una ficha del juego
@@ -28,7 +28,7 @@ class ficha():
         self.es_doble=True if self.num_1==self.num_2 else False
     # Asigna números a la ficha
     def __str__(self):
-        Mejor usar un vector de 3, e incluso no es necesario saber si es doble
+        #Mejor usar un vector de 3, e incluso no es necesario saber si es doble
         l=str(self.num_1)+"/"+str(self.num_2)
         return l
 
@@ -79,28 +79,30 @@ class juego():
         tablero=[]
 
     # Hace que el jugador juegue, decidiendo dónde poner una ficha válida, y actualiza el tablero
-    def jugada_jugador(self, ficha,):
-        # Números que puede jugar
-        numeros_p=np.array([self.numeros_posibles[0],self.numeros_posibles[1]])
-        # Orden 1 de ficha
-        numeros_ficha1=np.array([ficha.num_1,ficha.num_2])
-        # Orden 2 de ficha
-        numeros_ficha2=np.array([ficha.num_2,ficha.num_1])
-        numero_in=0
-        numero_out=0
-        if sum(numeros_p==numeros_ficha1)==0:
-            numero_in=numeros_ficha2[np.argmin(numeros_p == numeros_ficha2)]
-            numero_out = np.argmax(numeros_p == numeros_ficha2)
+    def jugada_jugador(self, ficha):
+        if self.tablero != []:
+            # Números que puede jugar
+            numeros_p=np.array([self.numeros_posibles[0],self.numeros_posibles[1]])
+            # Orden 1 de ficha
+            numeros_ficha1=np.array([ficha.num_1,ficha.num_2])
+            # Orden 2 de ficha
+            numeros_ficha2=np.array([ficha.num_2,ficha.num_1])
+            numero_in=0
+            numero_out=0
+            if sum(numeros_p==numeros_ficha1)==0:
+                numero_in=numeros_ficha2[np.argmin(numeros_p == numeros_ficha2)]
+                numero_out = np.argmax(numeros_p == numeros_ficha2)
+            else:
+                numero_in = numeros_ficha2[np.argmin(numeros_p == numeros_ficha1)]
+                numero_out = np.argmax(numeros_p == numeros_ficha1)
+
+            self.numeros_posibles[numero_out]=numero_in
+
+            self.tablero.append(ficha)
+
+            return self.tablero
         else:
-            numero_in = numeros_ficha2[np.argmin(numeros_p == numeros_ficha1)]
-            numero_out = np.argmax(numeros_p == numeros_ficha1)
-
-        self.numeros_posibles[numero_out]=numero_in
-
-        self.tablero.append(ficha)
-
-        return self.tablero
-
+            self.tablero.append(ficha)
 
 # Define jugador que utiliza RL para actuar
 class Jugador_re(nn.Module):
@@ -187,7 +189,7 @@ class Jugador_deterministico(juego):
         # Toma las fichas en mano y las convierte en vectores de 3
         fichas_Mano=juego.dar_fichas_jugadores()[self.num]
         for i in range(len(fichas_Mano)):
-            Asumiendo que las fichas se tratan como vectores de 3
+            #Asumiendo que las fichas se tratan como vectores de 3
             # Coloca en 1 aquellas posiciones que representan fichas en mano
             self.fMano[fichas_Mano[i][0], fichas_Mano[i][1]] = 1
             self.fMano[fichas_Mano[i][1], fichas_Mano[i][0]] = 1
@@ -201,5 +203,5 @@ class Jugador_deterministico(juego):
                 jugada[i][j]=cantidad[i]*cantidad[j]*jugada[i][j]
         # Encuentra la jugada con mayor peso y retorna esa ficha
         ficha_jugar=np.unravel_index(np.argmax(jugada),jugada.shape)
-        Falta indicar la forma en que debe retornarse esa ficha
+        #Falta indicar la forma en que debe retornarse esa ficha
         return ficha_jugar
