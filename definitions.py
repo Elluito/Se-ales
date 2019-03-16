@@ -44,23 +44,31 @@ class juego():
         for i in range(7):
             for j in range(i, 7):
                 self.fichas.append(ficha(i,j))
+        # Fichas en mano de cada jugador
+        self.fichas_jugadores=[]
 
+    # Retorna las fichas de cada jugador
+    def dar_fichas_jugadores(self):
+        return self.fichas_jugadores
+
+    # Retorna los números que se pueden jugar
+    def dar_numeros_posibles(self):
+        return self.numeros_posibles
 
     # Inicia el juego dando las fichas de cada jugador
     def iniciar(self):
         # Se hace un arreglo aleatorio de fichas
-        fichas_jugadores=[]
         fichas_por_jugador=int(len(self.fichas)/self.N)
         fichas=np.random.shuffle(self.fichas)
 
         # Se entregan fichas a cada jugador
         for i in range(self.N):
 
-            fichas_jugadores.append(fichas[:fichas_por_jugador])
+            self.fichas_jugadores.append(fichas[:fichas_por_jugador])
             del fichas[:fichas_por_jugador]
 
 
-        return fichas_jugadores
+        return self.fichas_jugadores
 
 
     # Reinicia el tablero
@@ -141,7 +149,25 @@ class ReplayMemory(object):
         return len(self.memory)
 
 
+# Jugador determinístico que inicialmente enfrentará al jugador con estrategia RL
+class Jugador_deterministico(juego):
+    def __init__(self,N):
+        # Relación con la clase juego
+        juego.__init__(self,N)
+        # Fichas en mano del jugador
+        self.fMano=np.zeros((7,7))
+        # Jugadas posibles
+        self.posibles=np.zeros((7,7))
+        # Número de jugador determinístico
+        self.num=0
 
-class Jugador_deterministico():
-    def __init__(self):
-        cosa=0
+
+    # Jugada jugador determinístico
+    def jugada_det(self,juego):
+        num_posibles=juego.dar_numeros_posibles()
+        # Coloca en 1 aquellas posiciones de la matriz 7x7 que indican fichas que pueden jugarse
+        self.posibles = np.zeros((7, 7))
+        self.posibles[num_posibles[0]-1,:]=1
+        self.posibles[num_posibles[1]-1,:]=1
+        fMano=juego.dar_fichas_jugadores()[self.num]
+        return ficha
