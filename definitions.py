@@ -26,7 +26,7 @@ class ficha():
         self.es_doble=True if self.num_1==self.num_2 else False
     # Asigna números a la ficha
     def __str__(self):
-        ## Mejor usar un vector de 3, e incluso no es necesario saber si es doble
+        Mejor usar un vector de 3, e incluso no es necesario saber si es doble
         l=str(self.num_1)+"/"+str(self.num_2)
         return l
 
@@ -174,15 +174,26 @@ class Jugador_deterministico(juego):
         num_posibles=juego.dar_numeros_posibles()
         # Coloca en 1 aquellas posiciones de la matriz 7x7 que indican fichas que pueden jugarse
         self.posibles = np.zeros((7, 7))
-        self.posibles[num_posibles[0]-1,:] = 1
-        self.posibles[num_posibles[1]-1,:] = 1
-        self.posibles[:,num_posibles[0] - 1] = 1
-        self.posibles[:,num_posibles[1] - 1] = 1
+        self.posibles[num_posibles[0],:] = 1
+        self.posibles[num_posibles[1],:] = 1
+        self.posibles[:,num_posibles[0]] = 1
+        self.posibles[:,num_posibles[1]] = 1
         # Toma las fichas en mano y las convierte en vectores de 3
         fichas_Mano=juego.dar_fichas_jugadores()[self.num]
         for i in range(len(fichas_Mano)):
-            ## Asumiendo que las fichas se tratan como vectores de 3
+            Asumiendo que las fichas se tratan como vectores de 3
             # Coloca en 1 aquellas posiciones que representan fichas en mano
             self.fMano[fichas_Mano[i][0], fichas_Mano[i][1]] = 1
             self.fMano[fichas_Mano[i][1], fichas_Mano[i][0]] = 1
-        return ficha
+        # Encuentra la cantidad de cada uno de los números
+        cantidad=np.sum(self.fMano,axis=1)
+        # Aplica máscara de jugadas posibles y fichas en mano a matriz peso
+        jugada=self.peso*self.fMano*self.posibles
+        for i in range(7):
+            for j in range(7):
+                # Multiplica por la cantidad de fichas que hay de cada número
+                jugada[i][j]=cantidad[i]*cantidad[j]*jugada[i][j]
+        # Encuentra la jugada con mayor peso y retorna esa ficha
+        ficha_jugar=np.unravel_index(np.argmax(jugada),jugada.shape)
+        Falta indicar la forma en que debe retornarse esa ficha
+        return ficha_jugar
