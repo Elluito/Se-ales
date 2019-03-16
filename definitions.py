@@ -26,6 +26,7 @@ class ficha():
         self.es_doble=True if self.num_1==self.num_2 else False
     # Asigna números a la ficha
     def __str__(self):
+        ## Mejor usar un vector de 3, e incluso no es necesario saber si es doble
         l=str(self.num_1)+"/"+str(self.num_2)
         return l
 
@@ -160,14 +161,28 @@ class Jugador_deterministico(juego):
         self.posibles=np.zeros((7,7))
         # Número de jugador determinístico
         self.num=0
+        # Peso de cada ficha
+        self.peso=20*np.identity(7)
+        for i in range(7):
+            for j in range(7):
+                self.peso[i][j]=self.peso[i][j]+i+j
 
 
     # Jugada jugador determinístico
     def jugada_det(self,juego):
+        # Toma los numeros posibles
         num_posibles=juego.dar_numeros_posibles()
         # Coloca en 1 aquellas posiciones de la matriz 7x7 que indican fichas que pueden jugarse
         self.posibles = np.zeros((7, 7))
-        self.posibles[num_posibles[0]-1,:]=1
-        self.posibles[num_posibles[1]-1,:]=1
-        fMano=juego.dar_fichas_jugadores()[self.num]
+        self.posibles[num_posibles[0]-1,:] = 1
+        self.posibles[num_posibles[1]-1,:] = 1
+        self.posibles[:,num_posibles[0] - 1] = 1
+        self.posibles[:,num_posibles[1] - 1] = 1
+        # Toma las fichas en mano y las convierte en vectores de 3
+        fichas_Mano=juego.dar_fichas_jugadores()[self.num]
+        for i in range(len(fichas_Mano)):
+            ## Asumiendo que las fichas se tratan como vectores de 3
+            # Coloca en 1 aquellas posiciones que representan fichas en mano
+            self.fMano[fichas_Mano[i][0], fichas_Mano[i][1]] = 1
+            self.fMano[fichas_Mano[i][1], fichas_Mano[i][0]] = 1
         return ficha
