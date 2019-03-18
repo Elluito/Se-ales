@@ -182,16 +182,15 @@ class Next_state_Max_action_Memory(object):
 
 
 # Jugador determinístico que inicialmente enfrentará al jugador con estrategia RL
-class Jugador_deterministico(juego):
-    def __init__(self,N):
-        # Relación con la clase juego
-        juego.__init__(self,N)
+class Jugador_deterministico():
+    def __init__(self,numero):
+     
         # Fichas en mano del jugador
         self.fMano=np.zeros((7,7))
         # Jugadas posibles
         self.posibles=np.zeros((7,7))
         # Número de jugador determinístico
-        self.num=0
+        self.num=numero
         # Peso de cada ficha
         self.peso=20*np.identity(7)
         for i in range(7):
