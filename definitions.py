@@ -14,7 +14,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random
 
-Transition=namedtuple("Trasition",('state','action'))
+state_action=namedtuple("state_action",('state','action'))
+next_state_action=namedtuple("next_state_max_action",('next_state','max_action'))
 
 
 # Define una ficha del juego
@@ -137,7 +138,7 @@ class Jugador_re(nn.Module):
                x = F.relu(self.layers[key](torch.tensor(x,dtype=torch.float)))
         return self.head(x)
 
-class ReplayMemory(object):
+class state_action_Memory(object):
 
     def __init__(self, capacity):
         self.capacity = capacity
@@ -148,7 +149,29 @@ class ReplayMemory(object):
         """Saves a transition."""
         if len(self.memory) < self.capacity:
             self.memory.append(None)
-        self.memory[self.position] = Transition(*args)
+        self.memory[self.position] = state_action(*args)
+        self.position = (self.position + 1) % self.capacity
+
+    def sample(self, batch_size):
+        return random.sample(self.memory, batch_size)
+
+    def __len__(self):
+        return len(self.memory)
+
+
+
+class Next_state_Max_action_Memory(object):
+
+    def __init__(self, capacity):
+        self.capacity = capacity
+        self.memory = []
+        self.position = 0
+
+    def push(self, *args):
+        """Saves a transition."""
+        if len(self.memory) < self.capacity:
+            self.memory.append(None)
+        self.memory[self.position] = state_action(*args)
         self.position = (self.position + 1) % self.capacity
 
     def sample(self, batch_size):
