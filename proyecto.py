@@ -117,9 +117,21 @@ def select_action(state,fichas,fichas_jugador_permitidas):
 
         temp=torch.tensor([[random.randrange(len(fichas_jugador_permitidas))]], dtype=torch.long)
         return temp
-    #TODO: IMP`LEMENTRAR LA FUNCIÓN QUE COGE LOAS FICHAS EL JUEGO Y BOTA UNA LISTA DE  FICHAS POSIBLES
-def dar_fichas_permitidas():
-    cosas=0
+   
+def dar_fichas_permitidas(juego,fichas_jugador1):
+    nums_pos=game.dar_numeros_posibles()
+    perm=[]
+    
+    for fic in fichas_jugador1:
+        if fic.num_1==nums_pos[0] or fic.num_1==nums_pos[1] or fic.num_2==nums_pos[0] or fic.num_2==nums_pos[1] :
+            perm.append(fic)
+    return perm
+    
+    
+    
+    
+    
+    
 
 
 
@@ -142,11 +154,11 @@ game=juego(4)
 
 jugador1=Jugador_re()
 
-jugador2=Jugador_deterministico(game)
+jugador2=Jugador_deterministico(1)
 
-jugador3=Jugador_deterministico(game)
+jugador3=Jugador_deterministico(2)
 
-jugador4=Jugador_deterministico(game)
+jugador4=Jugador_deterministico(3)
 
 jugadores=[jugador1,jugador2,jugador3,jugador4]
 
@@ -156,7 +168,7 @@ NUM_EPISODES=80
 EPS_DECAY=500
 EPS_END=0.05
 EPS_START=0.9
-
+# Se crea un  Dataframe para llamr cada una de las caracteristicas
 variables=["Cantidad_0","Cantidad_1","Cantidad_2","Cantidad_3","Cantidad_4","Cantidad_5","Cantidad_6","Cant_tab_0","Cant_tab_1","Cant_tab_2","Cant_tab_3","Cant_tab_4","Cant_tab_5","Cant_tab_6","Cant jugador_izq","Cant jugador der","Cant jugador frente","Paso jugador_izq con 0",
                            "Paso jugador_izq con 0","Paso jugador_izq con 1","Paso jugador_izq con 2","Paso jugador_izq con 3","Paso jugador_izq con 4","Paso jugador_izq con 5","Paso jugador_izq con 6",
                            "Paso jugador_der con 0","Paso jugador_der con 1", "Paso jugador_der con 2", "Paso jugador_der con 3","Paso jugador_der con 4", "Paso jugador_der con 5", "Paso jugador_der con 6",
@@ -183,13 +195,6 @@ for i in NUM_EPISODES:
     fj1,fj2,fj3,fj4=game.iniciar()
     jugador_inicia=-1
 
-    #
-    # for j in range(4):
-    #
-    #     estados[j]["Cant jugador izq"] = len(fj1)
-    #     estados[j]["Cant jugador der"] = len(fj1)
-    #     estados[j]["Cant jugador frente"] = len(fj1)
-    #     estados[j]["Cant jugador der"] = len(fj1)
 
     if tiene_doble_6(fj1)!=None:
         fj1,primera_jugada=tiene_doble_6(fj1)
@@ -208,6 +213,7 @@ for i in NUM_EPISODES:
     jugada=primera_jugada
     acabo=False
     jugador_turno=jugadores[jugador_inicia]
+    juego.fichasfichas_jugadores=fichas
 
 
 
@@ -217,7 +223,7 @@ for i in NUM_EPISODES:
     ultimas_4_jugadas=[]
     ultimas_4_jugadas.append(jugada)
     ronda=0
-
+    #INICIO EL CILO DEL JUEGO
     while not acabo:
         if ronda==0:
             if indice_jugador == 0:
@@ -264,6 +270,10 @@ for i in NUM_EPISODES:
                             else:
                                 state_j1[colum] = 0
                 jugada=select_action(state_j1,game)
+                #TODO toca revisar las condiciones de parada del juego
+                #aquí se revisa si los 4 juegadores y A PASARON
+                ultimas_4_jugadas.append(jugada)
+                
                 if ronda < 3:
                     #Esto es por que es la primera ronda
 
@@ -297,6 +307,7 @@ for i in NUM_EPISODES:
             indice_jugador = (indice_jugador + 1) % 4
 
             ronda += 1
+            
 
 
 
