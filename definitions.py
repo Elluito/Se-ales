@@ -224,6 +224,11 @@ class Jugador_deterministico():
                 # Multiplica por la cantidad de fichas que hay de cada número
                 jugada[i][j]=cantidad[i]*cantidad[j]*jugada[i][j]
         # Encuentra la jugada con mayor peso y retorna esa ficha
-        ficha_jugar=np.unravel_index(np.argmax(jugada),jugada.shape)
+        posicion=np.unravel_index(np.argmax(jugada),jugada.shape)
+        #Define ficha a jugar o si se debe pasar
+        ficha_jugar = ficha(posicion[0], posicion[1])
+        if jugada[ficha_jugar]==0:
+            ficha_jugar=None
+
         #Falta indicar la forma en que debe retornarse esa ficha
         return ficha_jugar
