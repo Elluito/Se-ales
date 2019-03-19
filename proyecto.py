@@ -28,14 +28,16 @@ def optimize_model():
 
 
 
-def tiene_doble_6(fichas):
+def tiene_doble_6(fichas,retornar_tupla=False):
 
     for elem in fichas:
         if elem.es_doble:
             if elem.num_1==6:
-                fichas.remove(elem)
-                return fichas,elem
-
+                if retornar_tupla:
+                    fichas.remove(elem)
+                    return fichas,elem
+                return True
+    return False
 def acualizar_estado(indice_jugador,ficha_jugada,state,num_posibles):
         if indice_jugador == 1:
             #si la ficha es None significa que el jugador paqsó con los siguiets numeros
@@ -152,15 +154,6 @@ def dar_fichas_permitidas(juego,fichas_jugador1):
 
 game=juego(4)
 
-jugador1=Jugador_re()
-
-jugador2=Jugador_deterministico(1)
-
-jugador3=Jugador_deterministico(2)
-
-jugador4=Jugador_deterministico(3)
-
-jugadores=[jugador1,jugador2,jugador3,jugador4]
 
 
 
@@ -169,12 +162,24 @@ EPS_DECAY=500
 EPS_END=0.05
 EPS_START=0.9
 # Se crea un  Dataframe para llamr cada una de las caracteristicas
-variables=["Cantidad_0","Cantidad_1","Cantidad_2","Cantidad_3","Cantidad_4","Cantidad_5","Cantidad_6","Cant_tab_0","Cant_tab_1","Cant_tab_2","Cant_tab_3","Cant_tab_4","Cant_tab_5","Cant_tab_6","Cant jugador_izq","Cant jugador der","Cant jugador frente","Paso jugador_izq con 0",
+variables=["Cantidad_0","Cantidad_1","Cantidad_2","Cantidad_3","Cantidad_4","Cantidad_5","Cantidad_6","Cant_tab_0","Cant_tab_1","Cant_tab_2","Cant_tab_3","Cant_tab_4","Cant_tab_5","Cant_tab_6","Paso jugador_izq con 0",
                            "Paso jugador_izq con 0","Paso jugador_izq con 1","Paso jugador_izq con 2","Paso jugador_izq con 3","Paso jugador_izq con 4","Paso jugador_izq con 5","Paso jugador_izq con 6",
                            "Paso jugador_der con 0","Paso jugador_der con 1", "Paso jugador_der con 2", "Paso jugador_der con 3","Paso jugador_der con 4", "Paso jugador_der con 5", "Paso jugador_der con 6",
                             "Paso jugador_frente con 0","Paso jugador_frente con 1", "Paso jugador_frente con 2", "Paso jugador_frente con 3","Paso jugador_frente con 4", "Paso jugador_frente con 5", "Paso jugador_frente con 6",
-                             "Doble 0","Doble 1","Doble 2","Doble 3","Doble 4","Doble 5","Doble 6", "FJ_izq","FJ_der","FJ_frente"]
-state_j1 = pd.DataFrame(data=np.zeros((1,len(variables))),colums=variables)
+                             "Doble 0","Doble 1","Doble 2","Doble 3","Doble 4","Doble 5","Doble 6", "FJ_izq","FJ_der","FJ_frente","FJ_1"]
+state_j1 = pd.DataFrame(data=np.zeros((1,len(variables))),columns=variables)
+hidden=[30]*3
+jugador1 = Jugador_re(len(variables),28,hidden)
+
+jugador2 = Jugador_deterministico(1)
+
+jugador3 = Jugador_deterministico(2)
+
+jugador4 = Jugador_deterministico(3)
+
+jugadores = [jugador1,jugador2,jugador3,jugador4]
+
+
 
 state_memory=state_action_Memory(1000000)
 next_state_memory=Next_state_Max_action_Memory(1000000)
@@ -189,31 +194,34 @@ next_state_memory=Next_state_Max_action_Memory(1000000)
 # state_j4 = pd.DataFrame(data=np.zeros((1,len(variables))),colums=variables)
 # estados=[state_j1,state_j2,state_j3,state_j4]
 
-for i in NUM_EPISODES:
+for i in range(NUM_EPISODES):
 
     game.reset()
     fj1,fj2,fj3,fj4=game.iniciar()
+    fichas = [fj1, fj2, fj3, fj4]
+    juego.fichas_jugadores = fichas
+
     jugador_inicia=-1
 
 
-    if tiene_doble_6(fj1)!=None:
-        fj1,primera_jugada=tiene_doble_6(fj1)
+    if tiene_doble_6(fj1):
+        fj1,primera_jugada=tiene_doble_6(fj1,True)
         jugador_inicia = 0
-    if tiene_doble_6(fj2)!=None:
-         fj2,primera_jugada=tiene_doble_6(fj2)
+    if tiene_doble_6(fj2):
+         fj2,primera_jugada=tiene_doble_6(fj2,True)
          jugador_inicia = 1
-    if tiene_doble_6(fj3)!=None:
-         fj3,primera_jugada=tiene_doble_6(fj3)
+    if tiene_doble_6(fj3):
+         fj3,primera_jugada=tiene_doble_6(fj3,True)
          jugador_inicia = 2
-    if tiene_doble_6(fj4)!=None:
-         fj4,primera_jugada=tiene_doble_6(fj4)
+    if tiene_doble_6(fj4):
+         fj4,primera_jugada=tiene_doble_6(fj4,True)
          jugador_inicia = 3
+
     indice_jugador=jugador_inicia
-    fichas=[fj1,fj2,fj3,fj4]
+
     jugada=primera_jugada
     acabo=False
     jugador_turno=jugadores[jugador_inicia]
-    juego.fichasfichas_jugadores=fichas
 
 
 
@@ -225,30 +233,36 @@ for i in NUM_EPISODES:
     turno = 0
 
     while not acabo:
+
+
         if turno==0:
             if indice_jugador == 0:
                 state_j1["FJ_izq"] = len(fichas[3])
                 state_j1["FJ_der"] = len(fichas[1])
-                state_j1["FJ_izq"] = len(fichas[2])
+                state_j1["FJ_frente"] = len(fichas[2])
                 for ficha in fj1:
-                    for colum in list(state_j1.columns.values):
+                    for colum in list(state_j1.columns.values)[]:
                         if "Cantidad" in colum:
                             if int(list(colum)[-1]) == ficha.num_1:
-                                state_j1["Cantidad %i" % ficha.num_1] += 1
+                                state_j1["Cantidad_%i" % ficha.num_1] += 1
 
-                            if int(list(colum)[-1]) == ficha.num_2:
-                                state_j1["Cantidad %i" % ficha.num_2] += 1
+                            if int(list(colum)[-1]) == ficha.num_2 and not ficha.es_doble:
+                                state_j1["Cantidad_%i" % ficha.num_2] += 1
 
-                            else:
-                                state_j1[colum] = 0
+
+
+                        if "Doble" in colum:
+                            if ficha.es_doble:
+                                state_j1["Doble %i" % ficha.num_2] += 1
 
                 state_memory.push(state_j1,dar_vector_ficha(game.fichas,jugada))
+
             tablero_ante_jugada=game.tablero
             tablero_pos_jugada=game.jugada_jugador(jugada)
             acualizar_estado(indice_jugador,jugada,state_j1,game.numeros_posibles)
             indice_jugador = (indice_jugador+1)%4
-            turno+=1
-        if turno!=0:
+            turno += 1
+        if turno != 0:
 
 
             #Aquí miro si le toca a jkugador re o a otro jugdor y
@@ -269,21 +283,29 @@ for i in NUM_EPISODES:
 
                             else:
                                 state_j1[colum] = 0
-                jugada=select_action(state_j1,game)
-                if turno < 3 :
-                    #Esto es por que es la primera
-                cosas=0
+                        if "Doble" in colum:
+                            if ficha.es_doble:
+                                state_j1["Doble %i" % ficha.num_2] += 1
+
+                fichas_jugador_perm=dar_fichas_permitidas(game,fichas[0])
+                jugada=None
+                if fichas_jugador_perm!=None:
+                    jugada = select_action(state_j1, game.fichas, fichas_jugador_perm)
+                    fichas[indice_jugador].remove(jugada)
+
+
+
+
                 #TODO toca revisar las condiciones de parada del juego
                 #aquí se revisa si los 4 juegadores y A PASARON
                 ultimas_4_jugadas.append(jugada)
 
                 if turno < 3:
                     #Esto es por que es la primera ronda
-
                     state_memory.push(state_j1,dar_vector_ficha(game.fichas,jugada))
                 else:
                     #BUSCO  LA MAXIMA ACCION PARA ENPAREJARLO CON EL "PROXIMO ESTADO" PAARA EL PROBLEMA
-                    # DE OPTIMIZACIÓJN
+                    # DE OPTIMIZACIÓN
                     retornar = None
                     maximo = -float("Inf")
                     fichas_jugador_permitidas=dar_fichas_permitidas()
@@ -299,7 +321,11 @@ for i in NUM_EPISODES:
                     #igualm,ente guardo el actual y acción que tomé
                     state_memory.push(state_j1, dar_vector_ficha(game.fichas, jugada))
             else:
-                jugada=jugadores[indice_jugador](game)
+                #TODO REVISAR COMO JUEGAN LOS JUGADORES DETERMINISTICO
+                jugada=jugadores[indice_jugador].jugada_det(game)
+                if jugada!=None:
+                    fichas[indice_jugador].remove(jugada)
+
 
             tablero_ante_jugada = game.tablero
 

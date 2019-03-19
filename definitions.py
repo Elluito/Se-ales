@@ -13,7 +13,7 @@ import time as t
 import matplotlib.pyplot as plt
 import numpy as np
 import random
-
+from copy import deepcopy
 state_action=namedtuple("state_action",('state','action'))
 next_state_action=namedtuple("next_state_max_action",('next_state','max_action'))
 
@@ -35,13 +35,13 @@ class ficha():
 
 # Define las caracterísitcas del juego
 class juego():
-    def __init__(self,N):
+    def __init__(self,n):
         # Tablero
         self.tablero=[]
         # Números que se pueden jugar
         self.numeros_posibles=()
         # Cantidad de jugadores, se mantendrá normalmente en 4
-        self.nume_jugadores=N
+        self.N=n
         # Fichas del juego
         self.fichas = []
         # Define las 28 fichas del juego
@@ -63,21 +63,20 @@ class juego():
     def iniciar(self):
         # Se hace un arreglo aleatorio de fichas
         fichas_por_jugador=int(len(self.fichas)/self.N)
-        fichas=np.random.shuffle(self.fichas)
+        fichas=deepcopy(self.fichas)
+        np.random.shuffle(fichas)
 
         # Se entregan fichas a cada jugador
         for i in range(self.N):
-
             self.fichas_jugadores.append(fichas[:fichas_por_jugador])
             del fichas[:fichas_por_jugador]
-
-
         return self.fichas_jugadores
 
 
     # Reinicia el tablero
     def reset(self):
-        tablero=[]
+        self.tablero=[]
+        self.fichas_jugadores=[]
 
     # Hace que el jugador juegue, decidiendo dónde poner una ficha válida, y actualiza el tablero
     def jugada_jugador(self, ficha):
