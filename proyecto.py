@@ -117,21 +117,21 @@ def select_action(state,fichas,fichas_jugador_permitidas):
 
         temp=torch.tensor([[random.randrange(len(fichas_jugador_permitidas))]], dtype=torch.long)
         return temp
-   
+
 def dar_fichas_permitidas(juego,fichas_jugador1):
     nums_pos=game.dar_numeros_posibles()
     perm=[]
-    
+
     for fic in fichas_jugador1:
         if fic.num_1==nums_pos[0] or fic.num_1==nums_pos[1] or fic.num_2==nums_pos[0] or fic.num_2==nums_pos[1] :
             perm.append(fic)
     return perm
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
 
 
 
@@ -222,10 +222,10 @@ for i in NUM_EPISODES:
 
     ultimas_4_jugadas=[]
     ultimas_4_jugadas.append(jugada)
-    ronda=0
-    #INICIO EL CILO DEL JUEGO
+    turno = 0
+
     while not acabo:
-        if ronda==0:
+        if turno==0:
             if indice_jugador == 0:
                 state_j1["FJ_izq"] = len(fichas[3])
                 state_j1["FJ_der"] = len(fichas[1])
@@ -247,8 +247,8 @@ for i in NUM_EPISODES:
             tablero_pos_jugada=game.jugada_jugador(jugada)
             acualizar_estado(indice_jugador,jugada,state_j1,game.numeros_posibles)
             indice_jugador = (indice_jugador+1)%4
-            ronda+=1
-        if ronda!=0:
+            turno+=1
+        if turno!=0:
 
 
             #Aquí miro si le toca a jkugador re o a otro jugdor y
@@ -270,11 +270,13 @@ for i in NUM_EPISODES:
                             else:
                                 state_j1[colum] = 0
                 jugada=select_action(state_j1,game)
+                if turno < 3 :
+                    #Esto es por que es la primera
                 #TODO toca revisar las condiciones de parada del juego
                 #aquí se revisa si los 4 juegadores y A PASARON
                 ultimas_4_jugadas.append(jugada)
-                
-                if ronda < 3:
+
+                if turno < 3:
                     #Esto es por que es la primera ronda
 
                     state_memory.push(state_j1,dar_vector_ficha(game.fichas,jugada))
@@ -293,7 +295,7 @@ for i in NUM_EPISODES:
                             retornar = ficha
 
                     next_state_memory.push(state_j1,dar_vector_ficha(game.fichas,retornar))
-                    #igualm,ente guardo el actual y acciñón que tomé
+                    #igualm,ente guardo el actual y acción que tomé
                     state_memory.push(state_j1, dar_vector_ficha(game.fichas, jugada))
             else:
                 jugada=jugadores[indice_jugador](game)
@@ -306,8 +308,35 @@ for i in NUM_EPISODES:
 
             indice_jugador = (indice_jugador + 1) % 4
 
-            ronda += 1
-            
+            turno += 1
+
+            ultimas_4_jugadas.append(jugada)
+            # ESTE IF ES PARA ACBAR EL JUEGO SI TODOS LOS JUGADORES PASARON
+            if len(ultimas_4_jugadas) == 4:
+
+                son_None = 0
+
+                for jug in ultimas_4_jugadas:
+
+                    if jug is None:
+
+                        son_None += 1
+
+                if son_None == 4:
+
+                    acabo = True
+
+                else:
+                    # Sacó la jugada más antígua
+                    ultimas_4_jugadas.pop(0)
+
+
+
+
+
+
+
+
 
 
 
