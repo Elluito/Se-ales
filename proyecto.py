@@ -272,6 +272,7 @@ for i in NUM_EPISODES:
                 jugada=select_action(state_j1,game)
                 if turno < 3 :
                     #Esto es por que es la primera
+                cosas=0
                 #TODO toca revisar las condiciones de parada del juego
                 #aquí se revisa si los 4 juegadores y A PASARON
                 ultimas_4_jugadas.append(jugada)
