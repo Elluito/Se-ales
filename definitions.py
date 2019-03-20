@@ -210,10 +210,9 @@ class Jugador_deterministico():
         # Toma las fichas en mano y las convierte en vectores de 3
         fichas_Mano=juego.dar_fichas_jugadores()[self.num]
         for i in range(len(fichas_Mano)):
-            #Asumiendo que las fichas se tratan como vectores de 3
             # Coloca en 1 aquellas posiciones que representan fichas en mano
-            self.fMano[fichas_Mano[i][0], fichas_Mano[i][1]] = 1
-            self.fMano[fichas_Mano[i][1], fichas_Mano[i][0]] = 1
+            self.fMano[fichas_Mano[i].num_1, fichas_Mano[i].num_2] = 1
+            self.fMano[fichas_Mano[i].num_2, fichas_Mano[i].num_1] = 1
         # Encuentra la cantidad de cada uno de los números
         cantidad=np.sum(self.fMano,axis=1)
         # Aplica máscara de jugadas posibles y fichas en mano a matriz peso
@@ -224,10 +223,9 @@ class Jugador_deterministico():
                 jugada[i][j]=cantidad[i]*cantidad[j]*jugada[i][j]
         # Encuentra la jugada con mayor peso y retorna esa ficha
         posicion=np.unravel_index(np.argmax(jugada),jugada.shape)
-        #Define ficha a jugar o si se debe pasar
+        # Define ficha a jugar o si se debe pasar
         ficha_jugar = ficha(posicion[0], posicion[1])
         if jugada[ficha_jugar]==0:
             ficha_jugar=None
-
-        #Falta indicar la forma en que debe retornarse esa ficha
+        # Falta indicar la forma en que debe retornarse esa ficha
         return ficha_jugar
