@@ -51,17 +51,17 @@ def acualizar_estado(indice_jugador,ficha_jugada,state,num_posibles):
 
         if indice_jugador == 2:
             # si la ficha es None significa que el jugador paqsó con los siguiets numeros
-            if ficha == None:
+            if ficha_jugada == None:
                 state["Paso jugador_frente con %i"%num_posibles[0]]=1
                 state["Paso jugador_frente con %i" % num_posibles[1]]=1
         if indice_jugador == 3:
             #si la ficha es None significa que el jugador paqsó con los siguiets numeros
-            if ficha==None:
+            if ficha_jugada==None:
 
                 state["Paso jugador_izq con %i"%num_posibles[0]] = 1
                 state["Paso jugador_izq con %i" % num_posibles[1]] = 1
 
-        if ficha!= None:
+        if ficha_jugada!= None:
             num1=ficha_jugada.num_1
             num2=ficha_jugada.num_2
             doble=ficha_jugada.es_doble
@@ -72,22 +72,18 @@ def acualizar_estado(indice_jugador,ficha_jugada,state,num_posibles):
                     state["Cant_tab_%i"%num1] += 1
                     state["Cant_tab_%i"%num2] += 1
 
-def dar_vector_ficha(fichas, ficha_accion):
-    vector=np.zeros((1,len(fichas)+1))
+def dar_vector_ficha( fichas , ficha_accion):
+    vector=np.zeros(len(fichas)+1)
+    if ficha_accion is None:
+        vector[-1]=1
+        return vector
     for i in range(len(fichas)):
         num_1=fichas[i].num_1
         num_2=fichas[i].num_2
         if  num_1==ficha_accion.num_1 and ficha_accion.num_2==num_2:
             vector[i]=1
-    if ficha ==None:
-        vector[-1]=1
+
     return vector
-
-
-
-
-
-
 
 def select_action(state,fichas,fichas_jugador_permitidas):
     global steps_done
@@ -97,33 +93,21 @@ def select_action(state,fichas,fichas_jugador_permitidas):
 
     if sample > eps_threshold:
         with torch.no_grad():
-
             retornar=None
             maximo=-float("Inf")
             for fic in fichas_jugador_permitidas:
-
                 vector_ficha=dar_vector_ficha(fichas,fic)
-
-
-
-                Q_s_a=jugador1(np.array(state).append(vector_ficha)).item()
+                Q_s_a=jugador1(np.append(np.array(state),vector_ficha)).item()
                 if Q_s_a > maximo:
                     retornar=ficha
-
-
-
-
             return retornar
     else:
-
-
-        temp=torch.tensor([[random.randrange(len(fichas_jugador_permitidas))]], dtype=torch.long)
-        return temp
+        temp=random.randrange(len(fichas_jugador_permitidas))
+        return fichas_jugador_permitidas[temp]
 
 def dar_fichas_permitidas(juego,fichas_jugador1):
-    nums_pos=game.dar_numeros_posibles()
+    nums_pos=juego.dar_numeros_posibles()
     perm=[]
-
     for fic in fichas_jugador1:
         if fic.num_1==nums_pos[0] or fic.num_1==nums_pos[1] or fic.num_2==nums_pos[0] or fic.num_2==nums_pos[1] :
             perm.append(fic)
@@ -141,15 +125,15 @@ def dar_fichas_permitidas(juego,fichas_jugador1):
 #######################################
 #DISTRIBUCIÓN DEL JUEGO
 
-               #  JUGADOR 4#
+               #  JUGADOR 3#
                #           #
                #           #
     ############            ############
-    #JUGADOR 1                  JUGADOR 3
+    #JUGADOR 0                  JUGADOR 2
     ############            ############
                 #           #
                 #           #
-                #  JUGADOR 2#
+                #  JUGADOR 1#
 
 
 game=juego(4)
@@ -169,7 +153,7 @@ variables=["Cantidad_0","Cantidad_1","Cantidad_2","Cantidad_3","Cantidad_4","Can
                              "Doble 0","Doble 1","Doble 2","Doble 3","Doble 4","Doble 5","Doble 6", "FJ_izq","FJ_der","FJ_frente","FJ_1"]
 state_j1 = pd.DataFrame(data=np.zeros((1,len(variables))),columns=variables)
 hidden=[30]*3
-jugador1 = Jugador_re(len(variables),28,hidden)
+jugador1 = Jugador_re(len(variables),29,hidden)
 
 jugador2 = Jugador_deterministico(1)
 
@@ -194,8 +178,11 @@ next_state_memory=Next_state_Max_action_Memory(1000000)
 # state_j4 = pd.DataFrame(data=np.zeros((1,len(variables))),colums=variables)
 # estados=[state_j1,state_j2,state_j3,state_j4]
 
-for i in range(NUM_EPISODES):
-
+for i in range(1,NUM_EPISODES+1):
+    if i==2:
+        input("se acab´ço el primer juego")
+    global steps_done
+    steps_done=i
     game.reset()
     fj1,fj2,fj3,fj4=game.iniciar()
     fichas = [fj1, fj2, fj3, fj4]
@@ -228,8 +215,7 @@ for i in range(NUM_EPISODES):
 
 
 
-    ultimas_4_jugadas=[]
-    ultimas_4_jugadas.append(jugada)
+
     turno = 0
 
     while not acabo:
@@ -241,16 +227,13 @@ for i in range(NUM_EPISODES):
                 state_j1["FJ_der"] = len(fichas[1])
                 state_j1["FJ_frente"] = len(fichas[2])
                 for ficha in fj1:
-                    for colum in list(state_j1.columns.values)[]:
+                    for colum in list(state_j1.columns.values):
                         if "Cantidad" in colum:
                             if int(list(colum)[-1]) == ficha.num_1:
                                 state_j1["Cantidad_%i" % ficha.num_1] += 1
 
                             if int(list(colum)[-1]) == ficha.num_2 and not ficha.es_doble:
                                 state_j1["Cantidad_%i" % ficha.num_2] += 1
-
-
-
                         if "Doble" in colum:
                             if ficha.es_doble:
                                 state_j1["Doble %i" % ficha.num_2] += 1
@@ -262,6 +245,7 @@ for i in range(NUM_EPISODES):
             acualizar_estado(indice_jugador,jugada,state_j1,game.numeros_posibles)
             indice_jugador = (indice_jugador+1)%4
             turno += 1
+            continue
         if turno != 0:
 
 
@@ -271,57 +255,58 @@ for i in range(NUM_EPISODES):
                 #actualizo los estados
                 state_j1["FJ_izq"] = len(fichas[3])
                 state_j1["FJ_der"] = len(fichas[1])
-                state_j1["FJ_izq"] = len(fichas[2])
+                state_j1["FJ_frente"] = len(fichas[2])
+                for colum in list(state_j1.columns.values):
+                    if "Cantidad" in colum:
+                        state_j1[colum]=0
+                    if "Doble" in colum:
+                        if ficha.es_doble:
+                            state_j1["Doble %i" % ficha.num_2] = 0
+
                 for ficha in fj1:
                     for colum in list(state_j1.columns.values):
                         if "Cantidad" in colum:
                             if int(list(colum)[-1]) == ficha.num_1:
-                                state_j1["Cantidad %i" % ficha.num_1] += 1
+                                state_j1["Cantidad_%i" % ficha.num_1] += 1
 
-                            if int(list(colum)[-1]) == ficha.num_2:
-                                state_j1["Cantidad %i" % ficha.num_2] += 1
+                            if int(list(colum)[-1]) == ficha.num_2 and not ficha.es_doble:
+                                state_j1["Cantidad_%i" % ficha.num_2] += 1
 
-                            else:
-                                state_j1[colum] = 0
                         if "Doble" in colum:
                             if ficha.es_doble:
                                 state_j1["Doble %i" % ficha.num_2] += 1
 
                 fichas_jugador_perm=dar_fichas_permitidas(game,fichas[0])
                 jugada=None
-                if fichas_jugador_perm!=None:
+                if fichas_jugador_perm!=[]:
                     jugada = select_action(state_j1, game.fichas, fichas_jugador_perm)
-                    fichas[indice_jugador].remove(jugada)
-
-
-
-
-                #TODO toca revisar las condiciones de parada del juego
-                #aquí se revisa si los 4 juegadores y A PASARON
-                ultimas_4_jugadas.append(jugada)
-
                 if turno < 3:
                     #Esto es por que es la primera ronda
                     state_memory.push(state_j1,dar_vector_ficha(game.fichas,jugada))
+
+                    if jugada is not None:
+                        fichas[indice_jugador].remove(jugada)
                 else:
                     #BUSCO  LA MAXIMA ACCION PARA ENPAREJARLO CON EL "PROXIMO ESTADO" PAARA EL PROBLEMA
                     # DE OPTIMIZACIÓN
                     retornar = None
                     maximo = -float("Inf")
-                    fichas_jugador_permitidas=dar_fichas_permitidas()
+                    fichas_jugador_permitidas=dar_fichas_permitidas(game,fichas[0])
                     for fic in fichas_jugador_permitidas:
 
-                        vector_ficha = dar_vector_ficha(fichas, fic)
+                        vector_ficha = dar_vector_ficha(game.fichas, fic)
 
-                        Q_s_a = jugador1(np.array(state_j1).append(vector_ficha)).item()
+                        Q_s_a = jugador1(np.append(np.array(state_j1),vector_ficha)).item()
                         if Q_s_a > maximo:
                             retornar = ficha
 
                     next_state_memory.push(state_j1,dar_vector_ficha(game.fichas,retornar))
                     #igualm,ente guardo el actual y acción que tomé
                     state_memory.push(state_j1, dar_vector_ficha(game.fichas, jugada))
+                    if jugada is not None:
+                        fichas[indice_jugador].remove(jugada)
             else:
-                #TODO REVISAR COMO JUEGAN LOS JUGADORES DETERMINISTICO
+                #TODO REVISAR COMO JUEGAN LOS JUGADORES DETERMINISTICOs
                 jugada=jugadores[indice_jugador].jugada_det(game)
                 if jugada!=None:
                     fichas[indice_jugador].remove(jugada)
@@ -337,29 +322,12 @@ for i in range(NUM_EPISODES):
 
             turno += 1
 
-            ultimas_4_jugadas.append(jugada)
-            # ESTE IF ES PARA ACBAR EL JUEGO SI TODOS LOS JUGADORES PASARON
-            if len(ultimas_4_jugadas) == 4:
-
-                son_None = 0
-
-                for jug in ultimas_4_jugadas:
-
-                    if jug is None:
-
-                        son_None += 1
-
-                if son_None == 4:
-
-                    acabo = True
-
-                else:
-                    # Sacó la jugada más antígua
-                    ultimas_4_jugadas.pop(0)
 
 
 
-
+            print(len(game.tablero))
+            print(game.numeros_posibles)
+            acabo=game.verificar_final()
 
 
 

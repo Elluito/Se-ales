@@ -39,7 +39,7 @@ class juego():
         # Tablero
         self.tablero=[]
         # Números que se pueden jugar
-        self.numeros_posibles=()
+        self.numeros_posibles=[-1,-1]
         # Cantidad de jugadores, se mantendrá normalmente en 4
         self.N=n
         # Fichas del juego
@@ -72,6 +72,24 @@ class juego():
             del fichas[:fichas_por_jugador]
         return self.fichas_jugadores
 
+    def verificar_final(self):
+        numeros=np.zeros(7)
+        for fich in self.tablero:
+            numeros[fich.num_1] += 1
+            #if fich.num_2!=fich.num_1:
+            numeros[fich.num_2] += 1
+        if len(np.where(numeros == 7)[0]) > 0 :
+            return True
+        else:
+            for fichas_jug in self.fichas_jugadores:
+                if len(fichas_jug) == 0:
+                    return True
+            return False
+
+
+
+
+
 
     # Reinicia el tablero
     def reset(self):
@@ -80,29 +98,33 @@ class juego():
 
     # Hace que el jugador juegue, decidiendo dónde poner una ficha válida, y actualiza el tablero
     def jugada_jugador(self, ficha):
-        if self.tablero != []:
-            # Números que puede jugar
-            numeros_p=np.array([self.numeros_posibles[0],self.numeros_posibles[1]])
-            # Orden 1 de ficha
-            numeros_ficha1=np.array([ficha.num_1,ficha.num_2])
-            # Orden 2 de ficha
-            numeros_ficha2=np.array([ficha.num_2,ficha.num_1])
-            numero_in=0
-            numero_out=0
-            if sum(numeros_p==numeros_ficha1)==0:
-                numero_in=numeros_ficha2[np.argmin(numeros_p == numeros_ficha2)]
-                numero_out = np.argmax(numeros_p == numeros_ficha2)
+        if ficha is not None:
+            if self.tablero != []:
+                # Números que puede jugar
+                numeros_p=np.array([self.numeros_posibles[0],self.numeros_posibles[1]])
+                # Orden 1 de ficha
+                numeros_ficha1=np.array([ficha.num_1,ficha.num_2])
+                # Orden 2 de ficha
+                numeros_ficha2=np.array([ficha.num_2,ficha.num_1])
+                numero_in=0
+                numero_out=0
+                if sum(numeros_p==numeros_ficha1)==0:
+                    numero_in=numeros_ficha2[np.argmin(numeros_p == numeros_ficha2)]
+                    numero_out = np.argmax(numeros_p == numeros_ficha2)
+                else:
+                    numero_in = numeros_ficha1[np.argmin(numeros_p == numeros_ficha1)]
+                    numero_out = np.argmax(numeros_p == numeros_ficha1)
+
+                self.numeros_posibles[numero_out]=numero_in
+
+                self.tablero.append(ficha)
+
+                return self.tablero
             else:
-                numero_in = numeros_ficha2[np.argmin(numeros_p == numeros_ficha1)]
-                numero_out = np.argmax(numeros_p == numeros_ficha1)
-
-            self.numeros_posibles[numero_out]=numero_in
-
-            self.tablero.append(ficha)
-
-            return self.tablero
-        else:
-            self.tablero.append(ficha)
+                self.tablero.append(ficha)
+                self.numeros_posibles[0]=6
+                self.numeros_posibles[1]=6
+                return self.tablero
 
 # Define jugador que utiliza RL para actuar
 class Jugador_re(nn.Module):
@@ -224,8 +246,15 @@ class Jugador_deterministico():
         # Encuentra la jugada con mayor peso y retorna esa ficha
         posicion=np.unravel_index(np.argmax(jugada),jugada.shape)
         # Define ficha a jugar o si se debe pasar
-        ficha_jugar = ficha(posicion[0], posicion[1])
-        if jugada[ficha_jugar]==0:
+        #ficha_jugar = ficha(posicion[0], posicion[1])
+        if jugada[posicion]==0:
             ficha_jugar=None
+            return ficha_jugar
+        for fic in fichas_Mano:
+            if fic.num_1 == posicion[0] and fic.num_2 == posicion[1]:
+                return fic
+            if fic.num_1 == posicion[1] and fic.num_2 == posicion[0]:
+                return fic
+
         # Falta indicar la forma en que debe retornarse esa ficha
-        return ficha_jugar
+        #return ficha_jugar
