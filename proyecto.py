@@ -113,6 +113,20 @@ def dar_fichas_permitidas(juego,fichas_jugador1):
             perm.append(fic)
     return perm
 
+def calcular_recompenza(fichas_jug,turno):
+    veces=int(turno/4)
+    global memory_recompenzas
+    suma=0
+    for fic in fichas_jug:
+        suma+=fic.num_1+fic.num_2
+    base=np.array([suma]*veces)
+    exponente=np.array(range(len(base)))
+    recompenzas=np.power(base,exponente)
+    recompenzas=list(recompenzas)
+    recompenzas.reverse()
+    return recompenzas
+
+
 
 
 
@@ -180,7 +194,7 @@ next_state_memory=Next_state_Max_action_Memory(1000000)
 
 for i in range(1,NUM_EPISODES+1):
     if i==2:
-        input("se acab´ço el primer juego")
+        input("se acabó el primer juego")
     global steps_done
     steps_done=i
     game.reset()
@@ -260,8 +274,7 @@ for i in range(1,NUM_EPISODES+1):
                     if "Cantidad" in colum:
                         state_j1[colum]=0
                     if "Doble" in colum:
-                        if ficha.es_doble:
-                            state_j1["Doble %i" % ficha.num_2] = 0
+                        state_j1[colum] = 0
 
                 for ficha in fj1:
                     for colum in list(state_j1.columns.values):
@@ -327,6 +340,7 @@ for i in range(1,NUM_EPISODES+1):
 
             print(len(game.tablero))
             print(game.numeros_posibles)
+            print(indice_jugador)
             acabo=game.verificar_final()
 
 

@@ -27,6 +27,7 @@ class ficha():
         self.num_2=lado_2
         # Determina si la ficha es doble
         self.es_doble=True if self.num_1==self.num_2 else False
+
     # Asigna números a la ficha
     def __str__(self):
         #Mejor usar un vector de 3, e incluso no es necesario saber si es doble
@@ -74,46 +75,67 @@ class juego():
 
     def verificar_final(self):
         numeros=np.zeros(7)
-        for fich in self.tablero:
-            numeros[fich.num_1] += 1
-            #if fich.num_2!=fich.num_1:
-            numeros[fich.num_2] += 1
-        if len(np.where(numeros == 7)[0]) > 0 :
+        perms=[]
+        for i in range(4):
+            perms.append(len(self.permitidas_jug(i)))
+
+        if sum(perms) == 0 :
             return True
         else:
             for fichas_jug in self.fichas_jugadores:
                 if len(fichas_jug) == 0:
                     return True
             return False
-
-
-
-
-
-
     # Reinicia el tablero
     def reset(self):
         self.tablero=[]
         self.fichas_jugadores=[]
-
-    # Hace que el jugador juegue, decidiendo dónde poner una ficha válida, y actualiza el tablero
+        self.numeros_posibles=[-1,1]
+    def permitidas_jug(self,indice_jugador):
+        nums_pos = self.numeros_posibles
+        perm = []
+        for fic in self.fichas_jugadores[indice_jugador]:
+            if fic.num_1 == nums_pos[0] or fic.num_1 == nums_pos[1] or fic.num_2 == nums_pos[0] or fic.num_2 == \
+                    nums_pos[1]:
+                perm.append(fic)
+        return perm
+    #Hace que el jugador juegue, decidiendo dónde poner una ficha válida, y actualiza el tablero
     def jugada_jugador(self, ficha):
         if ficha is not None:
             if self.tablero != []:
+
+
+
                 # Números que puede jugar
                 numeros_p=np.array([self.numeros_posibles[0],self.numeros_posibles[1]])
                 # Orden 1 de ficha
                 numeros_ficha1=np.array([ficha.num_1,ficha.num_2])
                 # Orden 2 de ficha
                 numeros_ficha2=np.array([ficha.num_2,ficha.num_1])
-                numero_in=0
-                numero_out=0
-                if sum(numeros_p==numeros_ficha1)==0:
-                    numero_in=numeros_ficha2[np.argmin(numeros_p == numeros_ficha2)]
-                    numero_out = np.argmax(numeros_p == numeros_ficha2)
+                numero_in = 0
+                numero_out = 0
+                if sum(numeros_ficha2==numeros_p)==2 or sum(numeros_ficha2==numeros_p)==2:
+
+                    if ficha.num_1==self.numeros_posibles[0]:
+                        numero_in=ficha.num_2
+                        numero_out=0
+                    else:
+                        numero_in = ficha.num_2
+                        numero_out = 1
                 else:
-                    numero_in = numeros_ficha1[np.argmin(numeros_p == numeros_ficha1)]
-                    numero_out = np.argmax(numeros_p == numeros_ficha1)
+
+                    if ficha.num_1==self.numeros_posibles[0]:
+                        numero_in=ficha.num_2
+                        numero_out = 0
+                    if ficha.num_1==self.numeros_posibles[1]:
+                        numero_in = ficha.num_2
+                        numero_out = 1
+                    if ficha.num_2 == self.numeros_posibles[0]:
+                        numero_in = ficha.num_1
+                        numero_out = 0
+                    if ficha.num_2 == self.numeros_posibles[1]:
+                        numero_in = ficha.num_1
+                        numero_out = 1
 
                 self.numeros_posibles[numero_out]=numero_in
 
@@ -221,6 +243,7 @@ class Jugador_deterministico():
 
     # Jugada jugador determinístico
     def jugada_det(self,juego):
+        self.fMano=np.zeros((7,7))
         # Toma los numeros posibles
         num_posibles=juego.dar_numeros_posibles()
         # Coloca en 1 aquellas posiciones de la matriz 7x7 que indican fichas que pueden jugarse
