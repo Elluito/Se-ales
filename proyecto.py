@@ -24,14 +24,21 @@ from copy import deepcopy
 
 
 def optimize_model():
-    if len(memory) < BATCH_SIZE:
+    if len(state_memory) < BATCH_SIZE:
         return
-    indices=numpy.random
-    transitions = memory.sample(BATCH_SIZE)
+    indices=np.random.choice(range(len(state_memory)),BATCH_SIZE)
+    state_batch = state_memory.give_elements(indices)
+    next_state_batch=next_state_memory.give_elements(indices)
     # Transpose the batch (see https://stackoverflow.com/a/19343/3343043 for
     # detailed explanation). This converts batch-array of Transitions
     # to Transition of batch-arrays.
-    batch = Transition(*zip(*transitions))
+    batch_state = state_action(*zip(*state_batch))
+    batch_next_state=next_state_action(*zip(*next_state_batch))
+    batch_reward=recomp_memory.give_lements(indices)
+
+
+
+
 
     # Compute a mask of non-final states and concatenate the batch elements
     # (a final state would've been the one after which simulation ended)
@@ -40,15 +47,16 @@ def optimize_model():
     # next_states = torch.cat([s for s in batch.next_state
     #                                             if s is not None])
 
-    state_batch = torch.cat(batch.state)
-    action_batch = torch.cat(batch.action)
-    reward_batch = torch.tensor(batch.reward)
-    next_states = torch.cat(batch.next_state)
+    state_batch = torch.cat(batch_state.state)
+    action_batch = torch.cat(batch_state.action)
+    reward_batch = torch.tensor(batch_reward)
+    next_states = torch.cat(batch_next_state)
+    max_action =torch.cat(batch_next_state.max_action)
 
     # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
     # columns of actions taken. These are the actions which would've been taken
     # for each batch state according to policy_net
-    state_action_values = policy_net(state_batch).gather(1, action_batch)
+    state_action_values = jugador1(state_batch,action_batch)
 
     # Compute V(s_{t+1}) for all next states.
     # Expected values of actions for non_final_next_states are computed based
@@ -56,13 +64,14 @@ def optimize_model():
     # This is merged based on the mask, such that we'll have either the expected
     # state value or 0 in case the state was final.
 
-    next_state_values = target_net(next_states).max(1)[0].detach()
+    #next_state_values = target_net(next_states).max(1)[0].detach()
+    next_state_values=jugador_ref(next_states,max_action)
     # Compute the expected Q values
     expected_state_action_values = (next_state_values * GAMMA) + reward_batch
 
     # Compute Huber loss
     loss = F.smooth_l1_loss(state_action_values, expected_state_action_values.unsqueeze(1))
-    perdida.append(loss.item())
+
     # Optimize the model
     optimizer.zero_grad()
     loss.backward()
@@ -192,208 +201,218 @@ def calcular_recompenza(fichas_jug,turno):
                 #           #
                 #  JUGADOR 1#
 
+if __name__ == '__main__':
 
-game=juego(4)
-
-
-
-
-NUM_EPISODES=80
-EPS_DECAY=500
-EPS_END=0.05
-EPS_START=0.9
-# Se crea un  Dataframe para llamr cada una de las caracteristicas
-variables=["Cantidad_0","Cantidad_1","Cantidad_2","Cantidad_3","Cantidad_4","Cantidad_5","Cantidad_6","Cant_tab_0","Cant_tab_1","Cant_tab_2","Cant_tab_3","Cant_tab_4","Cant_tab_5","Cant_tab_6","Paso jugador_izq con 0",
-                           "Paso jugador_izq con 0","Paso jugador_izq con 1","Paso jugador_izq con 2","Paso jugador_izq con 3","Paso jugador_izq con 4","Paso jugador_izq con 5","Paso jugador_izq con 6",
-                           "Paso jugador_der con 0","Paso jugador_der con 1", "Paso jugador_der con 2", "Paso jugador_der con 3","Paso jugador_der con 4", "Paso jugador_der con 5", "Paso jugador_der con 6",
-                            "Paso jugador_frente con 0","Paso jugador_frente con 1", "Paso jugador_frente con 2", "Paso jugador_frente con 3","Paso jugador_frente con 4", "Paso jugador_frente con 5", "Paso jugador_frente con 6",
-                             "Doble 0","Doble 1","Doble 2","Doble 3","Doble 4","Doble 5","Doble 6", "FJ_izq","FJ_der","FJ_frente","FJ_1"]
-state_j1 = pd.DataFrame(data=np.zeros((1,len(variables))),columns=variables)
-hidden=[30]*3
-jugador1 = Jugador_re(len(variables),29,hidden)
-
-jugador2 = Jugador_deterministico(1)
-
-jugador3 = Jugador_deterministico(2)
-
-jugador4 = Jugador_deterministico(3)
-
-jugadores = [jugador1,jugador2,jugador3,jugador4]
-
-
-
-state_memory=state_action_Memory(1000000)
-next_state_memory=Next_state_Max_action_Memory(1000000)
-recomp_memory=reward_Memory(1000000)
+    game = juego(4)
 
 
 
 
+    NUM_EPISODES=80
+    EPS_DECAY=500
+    EPS_END=0.05
+    EPS_START=0.9
+    GAMMA=0.999
 
-# state_j2 = pd.DataFrame(data=np.zeros((1,len(variables))),colums=variables)
-# state_j2 =pd.DataFrame(data=np.zeros((1,len(variables))),colums=variables)
-# state_j3 = pd.DataFrame(data=np.zeros((1,len(variables))),colums=variables)
-# state_j4 = pd.DataFrame(data=np.zeros((1,len(variables))),colums=variables)
-# estados=[state_j1,state_j2,state_j3,state_j4]
+    # Se crea un  Dataframe para llamr cada una de las caracteristicas
+    variables=["Cantidad_0","Cantidad_1","Cantidad_2","Cantidad_3","Cantidad_4","Cantidad_5","Cantidad_6","Cant_tab_0","Cant_tab_1","Cant_tab_2","Cant_tab_3","Cant_tab_4","Cant_tab_5","Cant_tab_6","Paso jugador_izq con 0",
+                               "Paso jugador_izq con 0","Paso jugador_izq con 1","Paso jugador_izq con 2","Paso jugador_izq con 3","Paso jugador_izq con 4","Paso jugador_izq con 5","Paso jugador_izq con 6",
+                               "Paso jugador_der con 0","Paso jugador_der con 1", "Paso jugador_der con 2", "Paso jugador_der con 3","Paso jugador_der con 4", "Paso jugador_der con 5", "Paso jugador_der con 6",
+                                "Paso jugador_frente con 0","Paso jugador_frente con 1", "Paso jugador_frente con 2", "Paso jugador_frente con 3","Paso jugador_frente con 4", "Paso jugador_frente con 5", "Paso jugador_frente con 6",
+                                 "Doble 0","Doble 1","Doble 2","Doble 3","Doble 4","Doble 5","Doble 6", "FJ_izq","FJ_der","FJ_frente","FJ_1"]
+    state_j1 = pd.DataFrame(data=np.zeros((1,len(variables))),columns=variables)
 
-for i in range(1,NUM_EPISODES+1):
-    if i==2:
-        input("se acabó el primer juego")
-    global steps_done
-    steps_done=i
-    game.reset()
-    fj1,fj2,fj3,fj4=game.iniciar()
-    fichas = [fj1, fj2, fj3, fj4]
-    juego.fichas_jugadores = fichas
-
-    jugador_inicia=-1
+    hidden=[30]*3
+    jugador1 = Jugador_re(len(variables),29,hidden)
 
 
-    if tiene_doble_6(fj1):
-        fj1,primera_jugada=tiene_doble_6(fj1,True)
-        jugador_inicia = 0
-    if tiene_doble_6(fj2):
-         fj2,primera_jugada=tiene_doble_6(fj2,True)
-         jugador_inicia = 1
-    if tiene_doble_6(fj3):
-         fj3,primera_jugada=tiene_doble_6(fj3,True)
-         jugador_inicia = 2
-    if tiene_doble_6(fj4):
-         fj4,primera_jugada=tiene_doble_6(fj4,True)
-         jugador_inicia = 3
+    jugador_ref= Jugador_re(len(variables),29,hidden)
+    jugador_ref.load_state_dict(jugador1.state_dict())
 
-    indice_jugador=jugador_inicia
 
-    jugada=primera_jugada
-    acabo=False
-    jugador_turno=jugadores[jugador_inicia]
+    jugador2 = Jugador_deterministico(1)
+
+    jugador3 = Jugador_deterministico(2)
+
+    jugador4 = Jugador_deterministico(3)
+
+    jugadores = [jugador1,jugador2,jugador3,jugador4]
+
+
+
+    state_memory=state_action_Memory(1000000)
+    next_state_memory=Next_state_Max_action_Memory(1000000)
+    recomp_memory=reward_Memory(1000000)
 
 
 
 
 
+    # state_j2 = pd.DataFrame(data=np.zeros((1,len(variables))),colums=variables)
+    # state_j2 =pd.DataFrame(data=np.zeros((1,len(variables))),colums=variables)
+    # state_j3 = pd.DataFrame(data=np.zeros((1,len(variables))),colums=variables)
+    # state_j4 = pd.DataFrame(data=np.zeros((1,len(variables))),colums=variables)
+    # estados=[state_j1,state_j2,state_j3,state_j4]
+
+    for i in range(1,NUM_EPISODES+1):
+        if i == 2:
+            input("se acabó el primer juego")
+        global steps_done
+        steps_done=i
+        game.reset()
+        fj1,fj2,fj3,fj4=game.iniciar()
+        fichas = [fj1, fj2, fj3, fj4]
+        juego.fichas_jugadores = fichas
+
+        jugador_inicia=-1
 
 
-    turno = 0
+        if tiene_doble_6(fj1):
+            fj1,primera_jugada=tiene_doble_6(fj1,True)
+            jugador_inicia = 0
+        if tiene_doble_6(fj2):
+             fj2,primera_jugada=tiene_doble_6(fj2,True)
+             jugador_inicia = 1
+        if tiene_doble_6(fj3):
+             fj3,primera_jugada=tiene_doble_6(fj3,True)
+             jugador_inicia = 2
+        if tiene_doble_6(fj4):
+             fj4,primera_jugada=tiene_doble_6(fj4,True)
+             jugador_inicia = 3
 
-    while not acabo:
+        indice_jugador=jugador_inicia
 
-
-        if turno==0:
-            if indice_jugador == 0:
-                state_j1["FJ_izq"] = len(fichas[3])
-                state_j1["FJ_der"] = len(fichas[1])
-                state_j1["FJ_frente"] = len(fichas[2])
-                for ficha in fj1:
-                    for colum in list(state_j1.columns.values):
-                        if "Cantidad" in colum:
-                            if int(list(colum)[-1]) == ficha.num_1:
-                                state_j1["Cantidad_%i" % ficha.num_1] += 1
-
-                            if int(list(colum)[-1]) == ficha.num_2 and not ficha.es_doble:
-                                state_j1["Cantidad_%i" % ficha.num_2] += 1
-                        if "Doble" in colum:
-                            if ficha.es_doble:
-                                state_j1["Doble %i" % ficha.num_2] += 1
-
-                state_memory.push(state_j1,dar_vector_ficha(game.fichas,jugada))
-
-            tablero_ante_jugada=game.tablero
-            tablero_pos_jugada=game.jugada_jugador(jugada)
-            acualizar_estado(indice_jugador,jugada,state_j1,game.numeros_posibles)
-            indice_jugador = (indice_jugador+1)%4
-            turno += 1
-            continue
-        if turno != 0:
+        jugada=primera_jugada
+        acabo=False
+        jugador_turno=jugadores[jugador_inicia]
 
 
-            #Aquí miro si le toca a jkugador re o a otro jugdor y
-            # hago la jugada con el juego de la iteracioión anterior
-            if indice_jugador == 0:
-                #actualizo los estados
-                state_j1["FJ_izq"] = len(fichas[3])
-                state_j1["FJ_der"] = len(fichas[1])
-                state_j1["FJ_frente"] = len(fichas[2])
-                for colum in list(state_j1.columns.values):
-                    if "Cantidad" in colum:
-                        state_j1[colum]=0
-                    if "Doble" in colum:
-                        state_j1[colum] = 0
 
-                for ficha in fj1:
-                    for colum in list(state_j1.columns.values):
-                        if "Cantidad" in colum:
-                            if int(list(colum)[-1]) == ficha.num_1:
-                                state_j1["Cantidad_%i" % ficha.num_1] += 1
 
-                            if int(list(colum)[-1]) == ficha.num_2 and not ficha.es_doble:
-                                state_j1["Cantidad_%i" % ficha.num_2] += 1
 
-                        if "Doble" in colum:
-                            if ficha.es_doble:
-                                state_j1["Doble %i" % ficha.num_2] += 1
 
-                fichas_jugador_perm=dar_fichas_permitidas(game,fichas[0])
-                jugada=None
-                if fichas_jugador_perm!=[]:
-                    jugada = select_action(state_j1, game.fichas, fichas_jugador_perm)
-                if turno < 3:
-                    #Esto es por que es la primera ronda
+
+        turno = 0
+
+        while not acabo:
+
+
+            if turno==0:
+                if indice_jugador == 0:
+                    state_j1["FJ_izq"] = len(fichas[3])
+                    state_j1["FJ_der"] = len(fichas[1])
+                    state_j1["FJ_frente"] = len(fichas[2])
+                    for ficha in fj1:
+                        for colum in list(state_j1.columns.values):
+                            if "Cantidad" in colum:
+                                if int(list(colum)[-1]) == ficha.num_1:
+                                    state_j1["Cantidad_%i" % ficha.num_1] += 1
+
+                                if int(list(colum)[-1]) == ficha.num_2 and not ficha.es_doble:
+                                    state_j1["Cantidad_%i" % ficha.num_2] += 1
+                            if "Doble" in colum:
+                                if ficha.es_doble:
+                                    state_j1["Doble %i" % ficha.num_2] += 1
+
                     state_memory.push(state_j1,dar_vector_ficha(game.fichas,jugada))
 
-                    if jugada is not None:
-                        fichas[indice_jugador].remove(jugada)
+                tablero_ante_jugada=game.tablero
+                tablero_pos_jugada=game.jugada_jugador(jugada)
+                acualizar_estado(indice_jugador,jugada,state_j1,game.numeros_posibles)
+                indice_jugador = (indice_jugador+1)%4
+                turno += 1
+                continue
+            if turno != 0:
+
+
+                #Aquí miro si le toca a jkugador re o a otro jugdor y
+                # hago la jugada con el juego de la iteracioión anterior
+                if indice_jugador == 0:
+                    #actualizo los estados
+                    state_j1["FJ_izq"] = len(fichas[3])
+                    state_j1["FJ_der"] = len(fichas[1])
+                    state_j1["FJ_frente"] = len(fichas[2])
+                    for colum in list(state_j1.columns.values):
+                        if "Cantidad" in colum:
+                            state_j1[colum]=0
+                        if "Doble" in colum:
+                            state_j1[colum] = 0
+
+                    for ficha in fj1:
+                        for colum in list(state_j1.columns.values):
+                            if "Cantidad" in colum:
+                                if int(list(colum)[-1]) == ficha.num_1:
+                                    state_j1["Cantidad_%i" % ficha.num_1] += 1
+
+                                if int(list(colum)[-1]) == ficha.num_2 and not ficha.es_doble:
+                                    state_j1["Cantidad_%i" % ficha.num_2] += 1
+
+                            if "Doble" in colum:
+                                if ficha.es_doble:
+                                    state_j1["Doble %i" % ficha.num_2] += 1
+
+                    fichas_jugador_perm=dar_fichas_permitidas(game,fichas[0])
+                    jugada=None
+                    if fichas_jugador_perm!=[]:
+                        jugada = select_action(state_j1, game.fichas, fichas_jugador_perm)
+                    if turno < 3:
+                        #Esto es por que es la primera ronda
+                        state_memory.push(state_j1,dar_vector_ficha(game.fichas,jugada))
+
+                        if jugada is not None:
+                            fichas[indice_jugador].remove(jugada)
+                    else:
+                        #BUSCO  LA MAXIMA ACCION PARA ENPAREJARLO CON EL "PROXIMO ESTADO" PAARA EL PROBLEMA
+                        # DE OPTIMIZACIÓN
+                        retornar = None
+                        maximo = -float("Inf")
+                        fichas_jugador_permitidas=dar_fichas_permitidas(game,fichas[0])
+                        for fic in fichas_jugador_permitidas:
+
+                            vector_ficha = dar_vector_ficha(game.fichas, fic)
+
+                            Q_s_a = jugador1(np.append(np.array(state_j1),vector_ficha)).item()
+                            if Q_s_a > maximo:
+                                retornar = ficha
+
+                        next_state_memory.push(state_j1,dar_vector_ficha(game.fichas,retornar))
+                        #igualm,ente guardo el actual y acción que tomé
+                        state_memory.push(state_j1, dar_vector_ficha(game.fichas, jugada))
+                        if jugada is not None:
+                            fichas[indice_jugador].remove(jugada)
                 else:
-                    #BUSCO  LA MAXIMA ACCION PARA ENPAREJARLO CON EL "PROXIMO ESTADO" PAARA EL PROBLEMA
-                    # DE OPTIMIZACIÓN
-                    retornar = None
-                    maximo = -float("Inf")
-                    fichas_jugador_permitidas=dar_fichas_permitidas(game,fichas[0])
-                    for fic in fichas_jugador_permitidas:
 
-                        vector_ficha = dar_vector_ficha(game.fichas, fic)
-
-                        Q_s_a = jugador1(np.append(np.array(state_j1),vector_ficha)).item()
-                        if Q_s_a > maximo:
-                            retornar = ficha
-
-                    next_state_memory.push(state_j1,dar_vector_ficha(game.fichas,retornar))
-                    #igualm,ente guardo el actual y acción que tomé
-                    state_memory.push(state_j1, dar_vector_ficha(game.fichas, jugada))
-                    if jugada is not None:
+                    jugada=jugadores[indice_jugador].jugada_det(game)
+                    if jugada!=None:
                         fichas[indice_jugador].remove(jugada)
-            else:
-                #TODO REVISAR COMO JUEGAN LOS JUGADORES DETERMINISTICOs
-                jugada=jugadores[indice_jugador].jugada_det(game)
-                if jugada!=None:
-                    fichas[indice_jugador].remove(jugada)
 
 
-            tablero_ante_jugada = game.tablero
+                tablero_ante_jugada = game.tablero
 
-            tablero_pos_jugada = game.jugada_jugador(jugada)
+                tablero_pos_jugada = game.jugada_jugador(jugada)
 
-            acualizar_estado(indice_jugador, jugada, state_j1, game.numeros_posibles)
+                acualizar_estado(indice_jugador, jugada, state_j1, game.numeros_posibles)
 
-            indice_jugador = (indice_jugador + 1) % 4
+                indice_jugador = (indice_jugador + 1) % 4
 
-            turno += 1
+                turno += 1
 
 
 
 
-            print(len(game.tablero))
-            print(game.numeros_posibles)
-            print(indice_jugador)
-            acabo=game.verificar_final()
-            r=calcular_recompenza(fichas[0],turno)
-            for reward in r:
+                print(len(game.tablero))
+                print(game.numeros_posibles)
+                print(indice_jugador)
+                acabo=game.verificar_final()
+                r=calcular_recompenza(fichas[0],turno)
+                for reward in r:
+                    recomp_memory.push(reward)
 
 
+        BATCH_SIZE = int(turno/4)
 
 
-
-
+        optimize_model()
 
 
 
