@@ -26,26 +26,24 @@ from copy import deepcopy
 def optimize_model():
     if len(state_memory) < BATCH_SIZE:
         return
-    indices=np.random.choice(range(len(state_memory)),BATCH_SIZE)
-    state_batch = state_memory.give_elements(indices)
-    next_state_batch=next_state_memory.give_elements(indices)
+    indices=np.random.choice(range(len(state_memory)),BATCH_SIZE-1)
+    if len(indices)>len(next_state_memory):
+
+        state_batch = state_memory.give_elements(indices[])
+        next_state_batch=next_state_memory.give_elements(indices[])
+    else:
+        state_batch = state_memory.give_elements(indices)
+        next_state_batch = next_state_memory.give_elements(indices)
     # Transpose the batch (see https://stackoverflow.com/a/19343/3343043 for
     # detailed explanation). This converts batch-array of Transitions
     # to Transition of batch-arrays.
+
+
     batch_state = state_action(*zip(*state_batch))
-    batch_next_state=next_state_action(*zip(*next_state_batch))
-    batch_reward=recomp_memory.give_lements(indices)
+    batch_next_state = next_state_action(*zip(*next_state_batch))
+    batch_reward = recomp_memory.give_elements(indices)
 
 
-
-
-
-    # Compute a mask of non-final states and concatenate the batch elements
-    # (a final state would've been the one after which simulation ended)
-    # non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
-    #                                       batch.next_state)), dtype=torch.uint8)
-    # next_states = torch.cat([s for s in batch.next_state
-    #                                             if s is not None])
 
     state_batch = torch.cat(batch_state.state)
     action_batch = torch.cat(batch_state.action)
@@ -56,6 +54,7 @@ def optimize_model():
     # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
     # columns of actions taken. These are the actions which would've been taken
     # for each batch state according to policy_net
+
     state_action_values = jugador1(state_batch,action_batch)
 
     # Compute V(s_{t+1}) for all next states.

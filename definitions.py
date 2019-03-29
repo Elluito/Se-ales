@@ -221,7 +221,7 @@ class reward_Memory(object):
     def sample(self, batch_size):
         return random.sample(self.memory, batch_size)
 
-    def give_lements(self,indixes):
+    def give_elements(self,indixes):
         return np.array(self.memory)[indixes]
 
     def __len__(self):
