@@ -199,7 +199,10 @@ class state_action_Memory(object):
         return random.sample(self.memory, batch_size)
 
     def give_elements(self,indixes):
-        return np.array(self.memory)[indixes]
+        retur=[]
+        for i in indixes:
+            retur.append(self.memory[i])
+        return retur
 
     def __len__(self):
         return len(self.memory)
@@ -246,8 +249,10 @@ class Next_state_Max_action_Memory(object):
         return random.sample(self.memory, batch_size)
 
     def give_elements(self,indixes):
-        return np.array(self.memory)[indixes]
-
+        retur = []
+        for i in indixes:
+            retur.append(self.memory[i])
+        return retur
     def __len__(self):
         return len(self.memory)
 

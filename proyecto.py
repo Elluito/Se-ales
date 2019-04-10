@@ -24,13 +24,15 @@ from copy import deepcopy
 
 
 def optimize_model():
-    if len(state_memory) < BATCH_SIZE:
+
+    if len(state_memory) < BATCH_SIZE or len(next_state_memory) < BATCH_SIZE:
         return
-    indices=np.random.choice(range(len(state_memory)),BATCH_SIZE-1)
+    print("YA ENTRE")
+    indices=np.random.choice(range(len(next_state_memory)),BATCH_SIZE-1,replace=False)
     if len(indices)>len(next_state_memory):
 
-        state_batch = state_memory.give_elements(indices[])
-        next_state_batch=next_state_memory.give_elements(indices[])
+        state_batch = state_memory.give_elements(indices[:len(next_state_memory)])
+        next_state_batch=next_state_memory.give_elements(indices[:len(next_state_memory)])
     else:
         state_batch = state_memory.give_elements(indices)
         next_state_batch = next_state_memory.give_elements(indices)
@@ -45,17 +47,31 @@ def optimize_model():
 
 
 
+
+    # Compute a mask of non-final states and concatenate the batch elements
+    # (a final state would've been the one after which simulation ended)
+    # non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
+    #                                       batch.next_state)), dtype=torch.uint8)
+    # next_states = torch.cat([s for s in batch.next_state
+    #                                             if s is not None])
+
     state_batch = torch.cat(batch_state.state)
     action_batch = torch.cat(batch_state.action)
     reward_batch = torch.tensor(batch_reward)
-    next_states = torch.cat(batch_next_state)
+    next_states = torch.cat(batch_next_state.next_state)
     max_action =torch.cat(batch_next_state.max_action)
 
     # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
     # columns of actions taken. These are the actions which would've been taken
     # for each batch state according to policy_net
+    entrada=[]
+    for  i in range(len(state_batch)):
+        entrada.append(np.array(torch.cat((state_batch[i][0][0],action_batch[i][0]))))
 
-    state_action_values = jugador1(state_batch,action_batch)
+
+
+
+    state_action_values = jugador1(entrada)
 
     # Compute V(s_{t+1}) for all next states.
     # Expected values of actions for non_final_next_states are computed based
@@ -64,9 +80,15 @@ def optimize_model():
     # state value or 0 in case the state was final.
 
     #next_state_values = target_net(next_states).max(1)[0].detach()
-    next_state_values=jugador_ref(next_states,max_action)
+    entrada = []
+    for i in range(len(next_states)):
+        entrada.append(np.array(torch.cat((next_states[i][0][0], max_action[i][0]))))
+
+
+    next_state_values=jugador_ref(entrada).detach()
+
     # Compute the expected Q values
-    expected_state_action_values = (next_state_values * GAMMA) + reward_batch
+    expected_state_action_values = (next_state_values * GAMMA)+torch.tensor(reward_batch,dtype=torch.float)
 
     # Compute Huber loss
     loss = F.smooth_l1_loss(state_action_values, expected_state_action_values.unsqueeze(1))
@@ -74,9 +96,10 @@ def optimize_model():
     # Optimize the model
     optimizer.zero_grad()
     loss.backward()
-    for param in policy_net.parameters():
+    for param in jugador1.parameters():
         param.grad.data.clamp_(-1, 1)
     optimizer.step()
+    return loss.item()
 
 
 def tiene_doble_6(fichas,retornar_tupla=False):
@@ -165,15 +188,14 @@ def dar_fichas_permitidas(juego,fichas_jugador1):
     return perm
 
 def calcular_recompenza(fichas_jug,turno):
-    veces=int(turno/4)
-    global memory_recompenzas
+    veces=turno
     suma=0
     for fic in fichas_jug:
         suma+=fic.num_1+fic.num_2
     base=np.array([suma]*veces)
     exponente=np.array(range(len(base)))
     recompenzas=np.power(base,exponente)
-    recompenzas=list(recompenzas)
+    recompenzas=list(-recompenzas)
     recompenzas.reverse()
     return recompenzas
 
@@ -207,11 +229,12 @@ if __name__ == '__main__':
 
 
 
-    NUM_EPISODES=80
+    NUM_EPISODES=200
     EPS_DECAY=500
     EPS_END=0.05
     EPS_START=0.9
     GAMMA=0.999
+    TARGET_UPDATE=10
 
     # Se crea un  Dataframe para llamr cada una de las caracteristicas
     variables=["Cantidad_0","Cantidad_1","Cantidad_2","Cantidad_3","Cantidad_4","Cantidad_5","Cantidad_6","Cant_tab_0","Cant_tab_1","Cant_tab_2","Cant_tab_3","Cant_tab_4","Cant_tab_5","Cant_tab_6","Paso jugador_izq con 0",
@@ -227,6 +250,7 @@ if __name__ == '__main__':
 
     jugador_ref= Jugador_re(len(variables),29,hidden)
     jugador_ref.load_state_dict(jugador1.state_dict())
+    optimizer = optim.RMSprop(jugador1.parameters())
 
 
     jugador2 = Jugador_deterministico(1)
@@ -238,7 +262,7 @@ if __name__ == '__main__':
     jugadores = [jugador1,jugador2,jugador3,jugador4]
 
 
-
+    #MEMORIAS
     state_memory=state_action_Memory(1000000)
     next_state_memory=Next_state_Max_action_Memory(1000000)
     recomp_memory=reward_Memory(1000000)
@@ -252,11 +276,12 @@ if __name__ == '__main__':
     # state_j3 = pd.DataFrame(data=np.zeros((1,len(variables))),colums=variables)
     # state_j4 = pd.DataFrame(data=np.zeros((1,len(variables))),colums=variables)
     # estados=[state_j1,state_j2,state_j3,state_j4]
-
+    pertida = []
     for i in range(1,NUM_EPISODES+1):
-        if i == 2:
-            input("se acabó el primer juego")
+        # if i == 2:
+        #     input("se acabó el primer juego")
         global steps_done
+
         steps_done=i
         game.reset()
         fj1,fj2,fj3,fj4=game.iniciar()
@@ -292,12 +317,14 @@ if __name__ == '__main__':
 
 
         turno = 0
+        VECES_JUGO=0
 
         while not acabo:
 
 
             if turno==0:
                 if indice_jugador == 0:
+                    VECES_JUGO+=1
                     state_j1["FJ_izq"] = len(fichas[3])
                     state_j1["FJ_der"] = len(fichas[1])
                     state_j1["FJ_frente"] = len(fichas[2])
@@ -313,7 +340,7 @@ if __name__ == '__main__':
                                 if ficha.es_doble:
                                     state_j1["Doble %i" % ficha.num_2] += 1
 
-                    state_memory.push(state_j1,dar_vector_ficha(game.fichas,jugada))
+                    state_memory.push(torch.tensor([[np.array(state_j1)]]),torch.tensor([[dar_vector_ficha(game.fichas,jugada)]]))
 
                 tablero_ante_jugada=game.tablero
                 tablero_pos_jugada=game.jugada_jugador(jugada)
@@ -327,6 +354,7 @@ if __name__ == '__main__':
                 #Aquí miro si le toca a jkugador re o a otro jugdor y
                 # hago la jugada con el juego de la iteracioión anterior
                 if indice_jugador == 0:
+                    VECES_JUGO += 1
                     #actualizo los estados
                     state_j1["FJ_izq"] = len(fichas[3])
                     state_j1["FJ_der"] = len(fichas[1])
@@ -356,7 +384,7 @@ if __name__ == '__main__':
                         jugada = select_action(state_j1, game.fichas, fichas_jugador_perm)
                     if turno < 3:
                         #Esto es por que es la primera ronda
-                        state_memory.push(state_j1,dar_vector_ficha(game.fichas,jugada))
+                        state_memory.push(torch.tensor([[np.array(state_j1)]]),torch.tensor([[dar_vector_ficha(game.fichas,jugada)]]))
 
                         if jugada is not None:
                             fichas[indice_jugador].remove(jugada)
@@ -370,13 +398,13 @@ if __name__ == '__main__':
 
                             vector_ficha = dar_vector_ficha(game.fichas, fic)
 
-                            Q_s_a = jugador1(np.append(np.array(state_j1),vector_ficha)).item()
+                            Q_s_a = jugador_ref(np.append(np.array(state_j1),vector_ficha)).item()
                             if Q_s_a > maximo:
                                 retornar = ficha
 
-                        next_state_memory.push(state_j1,dar_vector_ficha(game.fichas,retornar))
+                        next_state_memory.push(torch.tensor([[np.array(state_j1)]]),torch.tensor([[dar_vector_ficha(game.fichas,retornar)]]))
                         #igualm,ente guardo el actual y acción que tomé
-                        state_memory.push(state_j1, dar_vector_ficha(game.fichas, jugada))
+                        state_memory.push(torch.tensor([[np.array(state_j1)]]),torch.tensor([[dar_vector_ficha(game.fichas,jugada)]]))
                         if jugada is not None:
                             fichas[indice_jugador].remove(jugada)
                 else:
@@ -399,19 +427,33 @@ if __name__ == '__main__':
 
 
 
-                print(len(game.tablero))
-                print(game.numeros_posibles)
-                print(indice_jugador)
-                acabo=game.verificar_final()
-                r=calcular_recompenza(fichas[0],turno)
-                for reward in r:
-                    recomp_memory.push(reward)
+            acabo=game.verificar_final()
 
 
-        BATCH_SIZE = int(turno/4)
+
+        r=calcular_recompenza(fichas[0],VECES_JUGO)
+
+        for reward in r:
+            recomp_memory.push(torch.tensor([[int(reward)] ]))
 
 
-        optimize_model()
+        BATCH_SIZE = VECES_JUGO
+        if i%TARGET_UPDATE==0:
+            jugador_ref.load_state_dict(jugador1.state_dict())
+
+
+
+        l=optimize_model()
+        if l is not None:
+            pertida.append(l)
+        print(i)
+
+
+    plt.plot(pertida)
+    plt.show()
+
+
+
 
 
 
