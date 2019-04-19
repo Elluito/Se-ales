@@ -115,7 +115,7 @@ def tiene_doble_6(fichas,retornar_tupla=False):
     return False
 def acualizar_estado(indice_jugador,ficha_jugada,state,num_posibles):
         if indice_jugador == 1:
-            #si la ficha es None significa que el jugador paqsó con los siguiets numeros
+            #si la ficha es None significa que el jugador pasó con los siguiets numeros
             if ficha_jugada==None:
 
                 state["Paso jugador_der con %i"%num_posibles[0]] = 1
@@ -313,7 +313,7 @@ if __name__ == '__main__':
     TARGET_UPDATE=10
     RESETS=500
     Prueba=100
-    BATCH_SIZE = 150
+    BATCH_SIZE = 200
     LAMBDA=0.9
 
 
@@ -376,7 +376,6 @@ if __name__ == '__main__':
 
 
         if tiene_doble_6(fj1):
-            fj1,primera_jugada=tiene_doble_6(fj1,True)
             jugador_inicia = 0
         if tiene_doble_6(fj2):
              fj2,primera_jugada=tiene_doble_6(fj2,True)
@@ -390,7 +389,6 @@ if __name__ == '__main__':
 
         indice_jugador=jugador_inicia
 
-        jugada=primera_jugada
         acabo=False
         jugador_turno=jugadores[jugador_inicia]
         turno = 0
@@ -401,6 +399,7 @@ if __name__ == '__main__':
 
             if turno==0:
                 if indice_jugador == 0:
+                    fj1, primera_jugada = tiene_doble_6(fj1, True)
                     VECES_JUGO+=1
                     state_j1["FJ_izq"] = len(fichas[3])
                     state_j1["FJ_der"] = len(fichas[1])
@@ -419,6 +418,7 @@ if __name__ == '__main__':
 
                     state_memory.push(torch.tensor([[np.array(state_j1)]]),torch.tensor([[dar_vector_ficha(game.fichas,jugada)]]))
 
+                jugada = primera_jugada
                 tablero_ante_jugada=game.tablero
                 tablero_pos_jugada=game.jugada_jugador(jugada)
                 acualizar_estado(indice_jugador,jugada,state_j1,game.numeros_posibles)
@@ -428,7 +428,7 @@ if __name__ == '__main__':
             if turno != 0:
 
 
-                #Aquí miro si le toca a jkugador re o a otro jugdor y
+                #Aquí miro si le toca a jugador re o a otro jugdor y
                 # hago la jugada con el juego de la iteracioión anterior
                 if indice_jugador == 0:
                     VECES_JUGO += 1
