@@ -33,6 +33,9 @@ class ficha():
         #Mejor usar un vector de 3, e incluso no es necesario saber si es doble
         l=str(self.num_1)+"/"+str(self.num_2)
         return l
+    def __int__(self):
+        return self.num_1+self.num_2
+
 
 # Define las caracterísitcas del juego
 class juego():
@@ -74,18 +77,25 @@ class juego():
         return self.fichas_jugadores
 
     def verificar_final(self):
-        numeros=np.zeros(7)
+        QUIEN_GANO=None
         perms=[]
         for i in range(4):
             perms.append(len(self.permitidas_jug(i)))
 
         if sum(perms) == 0 :
-            return True
+            puntos=[]
+            for mano in self.fichas_jugadores:
+                puntos.append(sum(list(map(int,mano))))
+            QUIEN_GANO=int(np.argmin(puntos))
+            return True,QUIEN_GANO
         else:
+            QUIEN_GANO=0
             for fichas_jug in self.fichas_jugadores:
                 if len(fichas_jug) == 0:
-                    return True
-            return False
+                    return True,QUIEN_GANO
+                QUIEN_GANO+=1
+
+            return False,None
     # Reinicia el tablero
     def reset(self):
         self.tablero=[]
@@ -177,8 +187,10 @@ class Jugador_re(nn.Module):
     def forward(self,x):
         #recorro cada una de las capas y les digo que tipo de activación quiero que tengan en este caso utilizo activación RELU para todas las intermedias y lineal para la última
         for key in self.layers.keys():
+            x =torch.tensor(x,dtype=torch.float).clone()
             if "cap" in key:
-               x = F.relu(self.layers[key](torch.tensor(x,dtype=torch.float)))
+               x = F.relu(self.layers[key](x))
+
         return self.head(x)
 
 class state_action_Memory(object):
