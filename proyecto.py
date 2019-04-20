@@ -163,9 +163,11 @@ def dar_vector_ficha( fichas , ficha_accion):
 def select_action(state,fichas,fichas_jugador_permitidas):
     global steps_done
     sample = random.random()
+    #eps_threshold = EPS_END + (EPS_START - EPS_END) * \
+     #   math.exp(-1. * steps_done / EPS_DECAY)
     eps_threshold = EPS_END + (EPS_START - EPS_END) * \
-        math.exp(-1. * steps_done / EPS_DECAY)
-    print(eps_threshold)
+                    math.exp(-1. * 5*steps_done / RESETS)
+    #print(eps_threshold)
     if sample > eps_threshold:
         with torch.no_grad():
             retornar=None
@@ -188,8 +190,9 @@ def dar_fichas_permitidas(juego,fichas_jugador1):
             perm.append(fic)
     return perm
 
-def calcular_recompenza(quien_gano,turno):
+def calcular_recompenza(quien_gano,turno,fj1):
     veces=turno
+    costo=0
     recompenzas=[]
     if quien_gano==0:
         base=np.array([LAMBDA]*veces)
@@ -200,7 +203,9 @@ def calcular_recompenza(quien_gano,turno):
     else:
         base = np.array([LAMBDA] * veces)
         exponente = np.array(range(len(base)))
-        recompenzas = np.power(base, exponente) * -1
+        for i in fj1:
+            costo=i.num_1+i.num_2+costo
+        recompenzas = np.power(base, exponente) * -len(fj1)*costo/12
         recompenzas = list(recompenzas)
         recompenzas.reverse()
     # if quien_gano==0:
@@ -215,7 +220,7 @@ def calcular_recompenza(quien_gano,turno):
     return recompenzas
 
 def medir_performance():
-    PRUEBAS = 100
+    PRUEBAS = 1000
     veces_gano = 0
     for i in range(PRUEBAS):
         game.reset()
@@ -304,16 +309,15 @@ if __name__ == '__main__':
     gano1=0
 
 
-
-    NUM_EPISODES=2000
+    NUM_EPISODES=1000000
     EPS_DECAY=700
     EPS_END=0.05
     EPS_START=0.9
     GAMMA=0.7
-    TARGET_UPDATE=10
-    RESETS=500
-    Prueba=100
-    BATCH_SIZE = 200
+    TARGET_UPDATE=100
+    RESETS=10000
+    Prueba=10000
+    BATCH_SIZE = 1000
     LAMBDA=0.9
 
 
@@ -359,6 +363,7 @@ if __name__ == '__main__':
     # state_j4 = pd.DataFrame(data=np.zeros((1,len(variables))),colums=variables)
     # estados=[state_j1,state_j2,state_j3,state_j4]
     pertida = []
+    error=[]
 
     for i in range(1,NUM_EPISODES+1):
         # if i == 2:
@@ -415,7 +420,7 @@ if __name__ == '__main__':
                             if "Doble" in colum:
                                 if ficha.es_doble:
                                     state_j1["Doble %i" % ficha.num_2] += 1
-
+                    jugada = primera_jugada
                     state_memory.push(torch.tensor([[np.array(state_j1)]]),torch.tensor([[dar_vector_ficha(game.fichas,jugada)]]))
 
                 jugada = primera_jugada
@@ -510,7 +515,7 @@ if __name__ == '__main__':
 
 
 
-        r=calcular_recompenza(quien_gano,VECES_JUGO)
+        r=calcular_recompenza(quien_gano,VECES_JUGO,fj1)
 
         for reward in r:
             recomp_memory.push(torch.tensor([[int(reward)] ]))
@@ -523,14 +528,19 @@ if __name__ == '__main__':
 
 
 
-        optimize_model()
+        a=optimize_model()
+        if a is not None:
+            error.append(a)
 
         if i%Prueba==0:
             p=medir_performance()
             pertida.append(p)
 
-
+        print(i)
+    plt.figure()
     plt.plot(pertida)
+    plt.figure()
+    plt.plot(error)
     plt.show()
     print("Promedio error: %0.3f"%np.mean(pertida))
     print(gano1)
