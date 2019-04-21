@@ -1,24 +1,25 @@
 
 import pandas as pd
-import  numpy as np
-from sklearn.linear_model import LogisticRegression,LogisticRegressionCV
-from sklearn.neural_network import MLPRegressor
-import math
-import  random
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
-import torchvision.transforms as T
-from sklearn.utils import shuffle
-from collections import namedtuple
-import copy
-import itertools
-import time as t
-import matplotlib.pyplot as plt
-from sklearn.metrics import accuracy_score
+# import  numpy as np
+# from sklearn.linear_model import LogisticRegression,LogisticRegressionCV
+# from sklearn.neural_network import MLPRegressor
+# import math
+# import  random
+# import torch
+# import torch.nn as nn
+# import torch.optim as optim
+# import torch.nn.functional as F
+# import torchvision.transforms as T
+# from sklearn.utils import shuffle
+# from collections import namedtuple
+# import copy
+# import itertools
+# import time as t
+# import matplotlib.pyplot as plt
+# from sklearn.metrics import accuracy_score
 from definitions import *
 import time as t
+from torch.distributions import Categorical
 
 from copy import deepcopy
 
@@ -101,6 +102,57 @@ def optimize_model():
         param.grad.data.clamp_(-1, 1)
     optimizer.step()
     return loss.item()
+def update_policy(policy):
+        R = 0
+        rewards = []
+
+        # Discount future rewards back to the present using gamma
+        for r in policy.reward_episode[::-1]:
+            R = r + policy.gamma * R
+            rewards.insert(0, R)
+
+        # Scale rewards
+        rewards = torch.FloatTensor(rewards)
+        rewards = (rewards - rewards.mean()) / (rewards.std() + np.finfo(np.float32).eps)
+
+        # Calculate loss
+        loss = (torch.sum(torch.mul(policy.policy_history, Variable(rewards)).mul(-1), -1))
+
+        # Update network weights
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        # Save and intialize episode history counters
+        policy.loss_history.append(loss.item())
+        policy.reward_history.append(np.sum(policy.reward_episode))
+        policy.policy_history = Variable(torch.Tensor())
+        policy.reward_episode = []
+
+
+def main(episodes):
+    running_reward = 10
+    for episode in range(episodes):
+        state = env.reset()  # Reset environment and record the starting state
+        done = False
+
+        for time in range(1000):
+            action = select_action(state)
+            # Step through environment using chosen action
+            state, reward, done, _ = env.step(action.data[0])
+
+            # Save reward
+            policy.reward_episode.append(reward)
+            if done:
+                break
+
+        # Used to determine when the environment is solved.
+        running_reward = (running_reward * 0.99) + (time * 0.01)
+
+        update_policy()
+
+
+
 
 
 def tiene_doble_6(fichas,retornar_tupla=False):
@@ -120,10 +172,6 @@ def acualizar_estado(indice_jugador,ficha_jugada,state,num_posibles):
 
                 state["Paso jugador_der con %i"%num_posibles[0]] = 1
                 state["Paso jugador_der con %i" % num_posibles[1]] = 1
-
-
-
-
         if indice_jugador == 2:
             # si la ficha es None significa que el jugador paqsó con los siguiets numeros
             if ficha_jugada == None:
@@ -148,7 +196,7 @@ def acualizar_estado(indice_jugador,ficha_jugada,state,num_posibles):
                     state["Cant_tab_%i"%num2] += 1
 
 def dar_vector_ficha( fichas , ficha_accion):
-    vector=np.zeros(len(fichas)+1)
+    vector=np.zeros(len(fichas))
     if ficha_accion is None:
         vector[-1]=1
         return vector
@@ -160,26 +208,54 @@ def dar_vector_ficha( fichas , ficha_accion):
 
     return vector
 
-def select_action(state,fichas,fichas_jugador_permitidas):
-    global steps_done
-    sample = random.random()
-    eps_threshold = EPS_END + (EPS_START - EPS_END) * \
-        math.exp(-1. * steps_done / EPS_DECAY)
-    print(eps_threshold)
-    if sample > eps_threshold:
-        with torch.no_grad():
-            retornar=None
-            maximo=-float("Inf")
-            for fic in fichas_jugador_permitidas:
-                vector_ficha=dar_vector_ficha(fichas,fic)
-                Q_s_a=jugador1(np.append(np.array(state),vector_ficha)).item()
-                if Q_s_a > maximo:
-                    retornar=fic
-            return retornar
-    else:
-        temp=random.randrange(len(fichas_jugador_permitidas))
-        return fichas_jugador_permitidas[temp]
 
+def select_action(state,policy:Policy):
+    # Select an action (0 or 1) by running policy model and choosing based on the probabilities in state
+    state = torch.from_numpy(state).type(torch.FloatTensor)
+    state = policy(Variable(state))
+    c = Categorical(state)
+    action = c.sample()
+
+    # Add log probability of our chosen action to our history
+    if policy.policy_history.dim() != 0:
+        policy.policy_history = torch.cat([policy.policy_history, c.log_prob(action)])
+    else:
+        policy.policy_history = (c.log_prob(action))
+    return action
+#
+# def select_action(state,fichas,fichas_jugador_permitidas):
+#     global steps_done
+#     sample = random.random()
+#     eps_threshold = EPS_END + (EPS_START - EPS_END) * \
+#         math.exp(-1. * steps_done / EPS_DECAY)
+#     # print(eps_threshold)
+#     if sample > eps_threshold:
+#         with torch.no_grad():
+#             retornar=None
+#             maximo=-float("Inf")
+#             for fic in fichas_jugador_permitidas:
+#                 vector_ficha=dar_vector_ficha(fichas,fic)
+#                 Q_s_a=jugador1(np.append(np.array(state),vector_ficha)).item()
+#                 if Q_s_a > maximo:
+#                     retornar=fic
+#             return retornar
+#     else:
+#         temp=random.randrange(len(fichas_jugador_permitidas))
+#         return fichas_jugador_permitidas[temp]
+def select_action(state,policy):
+    # Select an action (0 or 1) by running policy model and choosing based on the probabilities in state
+    state=np.array(state)
+    state = torch.from_numpy(state).type(torch.FloatTensor)
+    state = policy(Variable(state))
+    c = Categorical(state)
+    action = c.sample()
+
+    # Add log probability of our chosen action to our history
+    if policy.policy_history.dim() != 0:
+        policy.policy_history = torch.cat([policy.policy_history, c.log_prob(action)])
+    else:
+        policy.policy_history = (c.log_prob(action))
+    return action
 def dar_fichas_permitidas(juego,fichas_jugador1):
     nums_pos=juego.dar_numeros_posibles()
     perm=[]
@@ -188,8 +264,8 @@ def dar_fichas_permitidas(juego,fichas_jugador1):
             perm.append(fic)
     return perm
 
-def calcular_recompenza(quien_gano,turno):
-    veces=turno
+def calcular_recompenza(quien_gano,turno,jugadas_invalidas):
+    veces=len(jugadas_invalidas)
     recompenzas=[]
     if quien_gano==0:
         base=np.array([LAMBDA]*veces)
@@ -211,13 +287,20 @@ def calcular_recompenza(quien_gano,turno):
     #     base = np.array([0] * veces)
     #     base[-1] = -1
     #     recompenzas = base
+    recompenzas=np.array(recompenzas)
+    recompenzas[jugadas_invalidas]=-10
 
     return recompenzas
 
 def medir_performance():
     PRUEBAS = 100
     veces_gano = 0
-    for i in range(PRUEBAS):
+    for episode in range(PRUEBAS):
+        # if i == 2:
+        #     input("se acabó el primer juego")
+        global steps_done
+
+        steps_done = episode % RESETS
         game.reset()
         fj1, fj2, fj3, fj4 = game.iniciar()
         fichas = [fj1, fj2, fj3, fj4]
@@ -244,35 +327,92 @@ def medir_performance():
         acabo = False
         jugador_turno = jugadores[jugador_inicia]
         turno = 0
-        game.jugada_jugador(jugada)
-
+        VECES_JUGO = 0
+        jugada_invalida = []
+        state_j1[str(primera_jugada)]
+        state_j1["num_pos1"] = 6
+        state_j1["num_pos2"] = 6
+        inicio = 0
         while not acabo:
-            if indice_jugador == 0:
-                # BUSCO  LA MAXIMA ACCION PARA ENPAREJARLO CON EL "PROXIMO ESTADO" PAARA EL PROBLEMA
-                # DE OPTIMIZACIÓN
-                retornar = None
-                maximo = -float("Inf")
-                fichas_jugador_permitidas = dar_fichas_permitidas(game, fichas[0])
-                for fic in fichas_jugador_permitidas:
 
-                    vector_ficha = dar_vector_ficha(game.fichas, fic)
+            if turno == 0:
+                if indice_jugador == 0:
 
-                    Q_s_a = jugador_ref(np.append(np.array(state_j1), vector_ficha)).item()
-                    if Q_s_a > maximo:
-                        retornar = fic
-                if retornar is not None:
-                    fichas[indice_jugador].remove(retornar)
-                    game.jugada_jugador(retornar)
+                    # VECES_JUGO+=1
+                    state_j1["FJ_izq"] = len(fichas[3])
+                    state_j1["FJ_der"] = len(fichas[1])
+                    state_j1["FJ_frente"] = len(fichas[2])
+                    vector_mano = np.zeros(28)
+                    for ficha in fj1:
+                        vector_mano = vector_mano + dar_vector_ficha(game.fichas, ficha)
+                    i = 0
+                    for fic in game.fichas:
+                        state_j1[str(fic)] = vector_mano[i]
+                        i += 1
+                tablero_ante_jugada = game.tablero
+                tablero_pos_jugada = game.jugada_jugador(jugada)
+                state_j1["num_pos1"] = game.numeros_posibles[0]
+                state_j1["num_pos2"] = game.numeros_posibles[1]
+                acualizar_estado(indice_jugador, jugada, state_j1, game.numeros_posibles)
                 indice_jugador = (indice_jugador + 1) % 4
-            else:
-                jugada = jugadores[indice_jugador].jugada_det(game)
-                if jugada != None:
-                    fichas[indice_jugador].remove(jugada)
-                game.jugada_jugador(jugada)
-                indice_jugador = (indice_jugador + 1) % 4
-            acabo, gano = game.verificar_final()
+                turno += 1
+                inicio = True
+                continue
+            if turno != 0:
+                # Aquí miro si le toca a jkugador re o a otro jugdor y
+                # hago la jugada con el juego de la iteracioión anterior
+                jugada = None
+                if indice_jugador == 0:
 
-            if gano == 0:
+                    # actualizo los estados
+                    state_j1["FJ_izq"] = len(fichas[3])
+                    state_j1["FJ_der"] = len(fichas[1])
+                    state_j1["FJ_frente"] = len(fichas[2])
+                    vector_mano = np.zeros(28)
+                    for ficha in fj1:
+                        vector_mano = vector_mano + dar_vector_ficha(game.fichas, ficha)
+                    i = 0
+                    for fic in game.fichas:
+                        state_j1[str(fic)] = vector_mano[i]
+                        i += 1
+                    fichas_jugador_perm = dar_fichas_permitidas(game, fichas[0])
+                    # revisar que la jugada que hice es válida
+                    posible_jugada = select_action(state_j1, jugador1)
+
+                    for k in range(len(fichas_jugador_perm)):
+                        fic_perm = fichas_jugador_perm[k]
+
+                        vector_ficha = dar_vector_ficha(game.fichas, fic_perm)
+                        if vector_ficha[posible_jugada] == 1:
+                            jugada = fic_perm
+                    if jugada is None:
+                        jugada_invalida.append(True)
+                        VECES_JUGO += 1
+
+                    if jugada is not None:
+                        jugada_invalida.append(False)
+                        VECES_JUGO += 1
+                        fichas[indice_jugador].remove(jugada)
+
+                else:
+
+                    jugada = jugadores[indice_jugador].jugada_det(game)
+                    if jugada != None:
+                        fichas[indice_jugador].remove(jugada)
+
+                tablero_ante_jugada = game.tablero
+                tablero_pos_jugada = game.jugada_jugador(jugada)
+                state_j1["num_pos1"] = game.numeros_posibles[0]
+                state_j1["num_pos2"] = game.numeros_posibles[1]
+
+                acualizar_estado(indice_jugador, jugada, state_j1, game.numeros_posibles)
+
+                indice_jugador = (indice_jugador + 1) % 4
+
+                turno += 1
+
+            acabo, quien_gano = game.verificar_final()
+            if quien_gano == 0:
                 veces_gano += 1
 
     return veces_gano
@@ -305,11 +445,11 @@ if __name__ == '__main__':
 
 
 
-    NUM_EPISODES=2000
-    EPS_DECAY=700
+    NUM_EPISODES=1000
+    EPS_DECAY=800
     EPS_END=0.05
     EPS_START=0.9
-    GAMMA=0.7
+    GAMMA=0.9
     TARGET_UPDATE=10
     RESETS=500
     Prueba=100
@@ -319,19 +459,21 @@ if __name__ == '__main__':
 
 
     # Se crea un  Dataframe para llamr cada una de las caracteristicas
-    variables=["Cantidad_0","Cantidad_1","Cantidad_2","Cantidad_3","Cantidad_4","Cantidad_5","Cantidad_6","Cant_tab_0","Cant_tab_1","Cant_tab_2","Cant_tab_3","Cant_tab_4","Cant_tab_5","Cant_tab_6","Paso jugador_izq con 0",
+    variables=["Cant_tab_0","Cant_tab_1","Cant_tab_2","Cant_tab_3","Cant_tab_4","Cant_tab_5","Cant_tab_6","Paso jugador_izq con 0",
                                "Paso jugador_izq con 0","Paso jugador_izq con 1","Paso jugador_izq con 2","Paso jugador_izq con 3","Paso jugador_izq con 4","Paso jugador_izq con 5","Paso jugador_izq con 6",
                                "Paso jugador_der con 0","Paso jugador_der con 1", "Paso jugador_der con 2", "Paso jugador_der con 3","Paso jugador_der con 4", "Paso jugador_der con 5", "Paso jugador_der con 6",
                                 "Paso jugador_frente con 0","Paso jugador_frente con 1", "Paso jugador_frente con 2", "Paso jugador_frente con 3","Paso jugador_frente con 4", "Paso jugador_frente con 5", "Paso jugador_frente con 6",
-                                 "Doble 0","Doble 1","Doble 2","Doble 3","Doble 4","Doble 5","Doble 6", "FJ_izq","FJ_der","FJ_frente","FJ_1"]
+                                 "Doble 0","Doble 1","Doble 2","Doble 3","Doble 4","Doble 5","Doble 6", "FJ_izq","FJ_der","FJ_frente","FJ_1","num_pos1","num_pos2"]
     state_j1 = pd.DataFrame(data=np.zeros((1,len(variables))),columns=variables)
+    for fic in game.fichas:
+        state_j1[str(fic)] = 0
 
     hidden=[100]*3
-    jugador1 = Jugador_re(len(variables),29,hidden)
+    jugador1 = Policy(GAMMA,dim_state=len(state_j1.columns.values))
 
 
-    jugador_ref= Jugador_re(len(variables),29,hidden)
-    jugador_ref.load_state_dict(jugador1.state_dict())
+    #jugador_ref= Jugador_re(len(state_j1.columns.values),28,hidden)
+    #jugador_ref.load_state_dict(jugador1.state_dict())
     optimizer = optim.Adam(jugador1.parameters())
 
 
@@ -360,12 +502,12 @@ if __name__ == '__main__':
     # estados=[state_j1,state_j2,state_j3,state_j4]
     pertida = []
 
-    for i in range(1,NUM_EPISODES+1):
+    for episode in range(1,NUM_EPISODES+1):
         # if i == 2:
         #     input("se acabó el primer juego")
         global steps_done
 
-        steps_done=i%RESETS
+        steps_done=episode%RESETS
         game.reset()
         fj1,fj2,fj3,fj4=game.iniciar()
         fichas = [fj1, fj2, fj3, fj4]
@@ -395,95 +537,73 @@ if __name__ == '__main__':
         jugador_turno=jugadores[jugador_inicia]
         turno = 0
         VECES_JUGO=0
-
+        jugada_invalida=[]
+        state_j1[str(primera_jugada)]
+        state_j1["num_pos1"]=6
+        state_j1["num_pos2"]=6
+        inicio=0
         while not acabo:
 
 
             if turno==0:
                 if indice_jugador == 0:
-                    VECES_JUGO+=1
+
+                    # VECES_JUGO+=1
                     state_j1["FJ_izq"] = len(fichas[3])
                     state_j1["FJ_der"] = len(fichas[1])
                     state_j1["FJ_frente"] = len(fichas[2])
+                    vector_mano=np.zeros(28)
                     for ficha in fj1:
-                        for colum in list(state_j1.columns.values):
-                            if "Cantidad" in colum:
-                                if int(list(colum)[-1]) == ficha.num_1:
-                                    state_j1["Cantidad_%i" % ficha.num_1] += 1
-
-                                if int(list(colum)[-1]) == ficha.num_2 and not ficha.es_doble:
-                                    state_j1["Cantidad_%i" % ficha.num_2] += 1
-                            if "Doble" in colum:
-                                if ficha.es_doble:
-                                    state_j1["Doble %i" % ficha.num_2] += 1
-
-                    state_memory.push(torch.tensor([[np.array(state_j1)]]),torch.tensor([[dar_vector_ficha(game.fichas,jugada)]]))
-
+                        vector_mano=vector_mano+dar_vector_ficha(game.fichas,ficha)
+                    i=0
+                    for fic in game.fichas:
+                        state_j1[str(fic)]=vector_mano[i]
+                        i+=1
                 tablero_ante_jugada=game.tablero
                 tablero_pos_jugada=game.jugada_jugador(jugada)
+                state_j1["num_pos1"]=game.numeros_posibles[0]
+                state_j1["num_pos2"]=game.numeros_posibles[1]
                 acualizar_estado(indice_jugador,jugada,state_j1,game.numeros_posibles)
                 indice_jugador = (indice_jugador+1)%4
                 turno += 1
+                inicio=True
                 continue
             if turno != 0:
-
-
-                #Aquí miro si le toca a jkugador re o a otro jugdor y
+               #Aquí miro si le toca a jkugador re o a otro jugdor y
                 # hago la jugada con el juego de la iteracioión anterior
+                jugada = None
                 if indice_jugador == 0:
-                    VECES_JUGO += 1
+
                     #actualizo los estados
                     state_j1["FJ_izq"] = len(fichas[3])
                     state_j1["FJ_der"] = len(fichas[1])
                     state_j1["FJ_frente"] = len(fichas[2])
-                    for colum in list(state_j1.columns.values):
-                        if "Cantidad" in colum:
-                            state_j1[colum]=0
-                        if "Doble" in colum:
-                            state_j1[colum] = 0
-
+                    vector_mano = np.zeros(28)
                     for ficha in fj1:
-                        for colum in list(state_j1.columns.values):
-                            if "Cantidad" in colum:
-                                if int(list(colum)[-1]) == ficha.num_1:
-                                    state_j1["Cantidad_%i" % ficha.num_1] += 1
-
-                                if int(list(colum)[-1]) == ficha.num_2 and not ficha.es_doble:
-                                    state_j1["Cantidad_%i" % ficha.num_2] += 1
-
-                            if "Doble" in colum:
-                                if ficha.es_doble:
-                                    state_j1["Doble %i" % ficha.num_2] += 1
-
+                        vector_mano = vector_mano + dar_vector_ficha(game.fichas, ficha)
+                    i = 0
+                    for fic in game.fichas:
+                        state_j1[str(fic)] = vector_mano[i]
+                        i += 1
                     fichas_jugador_perm=dar_fichas_permitidas(game,fichas[0])
-                    jugada=None
-                    if fichas_jugador_perm!=[]:
-                        jugada = select_action(state_j1, game.fichas, fichas_jugador_perm)
-                    if turno < 3:
-                        #Esto es por que es la primera ronda
-                        state_memory.push(torch.tensor([[np.array(state_j1)]]),torch.tensor([[dar_vector_ficha(game.fichas,jugada)]]))
+                    #revisar que la jugada que hice es válida
+                    posible_jugada = select_action(state_j1,jugador1)
 
-                        if jugada is not None:
-                            fichas[indice_jugador].remove(jugada)
-                    else:
-                        #BUSCO  LA MAXIMA ACCION PARA ENPAREJARLO CON EL "PROXIMO ESTADO" PAARA EL PROBLEMA
-                        # DE OPTIMIZACIÓN
-                        retornar = None
-                        maximo = -float("Inf")
-                        fichas_jugador_permitidas=dar_fichas_permitidas(game,fichas[0])
-                        for fic in fichas_jugador_permitidas:
+                    for k in range(len(fichas_jugador_perm)):
+                        fic_perm=fichas_jugador_perm[k]
 
-                            vector_ficha = dar_vector_ficha(game.fichas, fic)
+                        vector_ficha=dar_vector_ficha(game.fichas,fic_perm)
+                        if vector_ficha[posible_jugada]==1:
+                            jugada=fic_perm
+                    if jugada is None:
+                        jugada_invalida.append(True)
+                        VECES_JUGO += 1
 
-                            Q_s_a = jugador_ref(np.append(np.array(state_j1),vector_ficha)).item()
-                            if Q_s_a > maximo:
-                                retornar = fic
+                    if jugada is not None:
+                        jugada_invalida.append(False)
+                        VECES_JUGO += 1
+                        fichas[indice_jugador].remove(jugada)
 
-                        next_state_memory.push(torch.tensor([[np.array(state_j1)]]),torch.tensor([[dar_vector_ficha(game.fichas,retornar)]]))
-                        #igualm,ente guardo el actual y acción que tomé
-                        state_memory.push(torch.tensor([[np.array(state_j1)]]),torch.tensor([[dar_vector_ficha(game.fichas,jugada)]]))
-                        if jugada is not None:
-                            fichas[indice_jugador].remove(jugada)
                 else:
 
                     jugada=jugadores[indice_jugador].jugada_det(game)
@@ -492,8 +612,9 @@ if __name__ == '__main__':
 
 
                 tablero_ante_jugada = game.tablero
-
                 tablero_pos_jugada = game.jugada_jugador(jugada)
+                state_j1["num_pos1"] = game.numeros_posibles[0]
+                state_j1["num_pos2"] = game.numeros_posibles[1]
 
                 acualizar_estado(indice_jugador, jugada, state_j1, game.numeros_posibles)
 
@@ -509,25 +630,25 @@ if __name__ == '__main__':
                 gano1+=1
 
 
-
-        r=calcular_recompenza(quien_gano,VECES_JUGO)
-
-        for reward in r:
-            recomp_memory.push(torch.tensor([[int(reward)] ]))
-
-
-
-        if i%TARGET_UPDATE==0:
-            jugador_ref.load_state_dict(jugador1.state_dict())
+        if inicio:
+            r=calcular_recompenza(quien_gano,VECES_JUGO-1,jugada_invalida)
+            jugador1.reward_episode.extend(r)
+        if not inicio:
+            r = calcular_recompenza(quien_gano, VECES_JUGO, jugada_invalida)
+            jugador1.reward_episode.extend(r)
 
 
 
 
-        optimize_model()
 
-        if i%Prueba==0:
+
+
+        update_policy(jugador1)
+
+        if episode%Prueba==0:
             p=medir_performance()
-            pertida.append(p)
+            print(p)
+
 
 
     plt.plot(pertida)

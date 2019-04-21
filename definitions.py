@@ -14,6 +14,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random
 from copy import deepcopy
+from torch.autograd import Variable
+
 state_action=namedtuple("state_action",('state','action'))
 next_state_action=namedtuple("next_state_max_action",('next_state','max_action'))
 
@@ -326,3 +328,34 @@ class Jugador_deterministico():
 
         # Falta indicar la forma en que debe retornarse esa ficha
         #return ficha_jugar
+
+
+class Policy(nn.Module):
+    def __init__(self,gamma,dim_state):
+        super(Policy, self).__init__()
+        self.state_space = dim_state
+        self.action_space =28
+
+        self.l1 = nn.Linear(self.state_space, 128, bias=False)
+        self.l2 = nn.Linear(128, self.action_space, bias=False)
+
+        self.gamma = gamma
+
+        # Episode policy and reward history
+        self.policy_history = Variable(torch.Tensor())
+        self.reward_episode = []
+        # Overall reward and loss history
+        self.reward_history = []
+        self.loss_history = []
+
+
+    def forward(self, x):
+        model = torch.nn.Sequential(
+            self.l1,
+            nn.Dropout(p=0.6),
+            nn.ReLU(),
+            self.l2,
+            nn.Softmax(dim=-1)
+        )
+        return model(x)
+
